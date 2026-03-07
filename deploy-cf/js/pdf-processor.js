@@ -13,7 +13,6 @@
  *   });
  *   await processor.processFile(file);
  *
- * Created with Perplexity Computer — https://www.perplexity.ai/computer
  */
 
 'use strict';

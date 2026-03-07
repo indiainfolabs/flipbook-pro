@@ -843,10 +843,18 @@ class FlipbookViewer {
       ? (pages[0].width || 794) / (pages[0].height || 1123)
       : 794 / 1123;
 
-    const chromeH = 48 + 44 + 24; // toolbar + bottom bar + minimal padding
+    // Minimal chrome: bottom bar (~44px) + small padding (14px)
+    const chromeH = 44 + 14;
     const viewH = window.innerHeight - chromeH;
-    const pageH = viewH;
-    const pageW = Math.round(pageH * aspectRatio);
+    const viewW = window.innerWidth - 40;
+    let pageH = viewH;
+    let pageW = Math.round(pageH * aspectRatio);
+    // Constrain by width if book is too wide
+    const maxPageW = this.isTwoPage ? viewW / 2 : viewW;
+    if (pageW > maxPageW) {
+      pageW = maxPageW;
+      pageH = Math.round(pageW / aspectRatio);
+    }
 
     const bookW = this.isTwoPage ? pageW * 2 : pageW;
 
@@ -2169,7 +2177,7 @@ class FlipbookViewer {
 
     const container = this.flipbookContainer;
     const vw = container ? container.clientWidth - 20 : window.innerWidth - 40;
-    const vh = container ? container.clientHeight - 8 : window.innerHeight - 116;
+    const vh = container ? container.clientHeight - 8 : window.innerHeight - 58; // bottom bar + small padding
 
     const maxPageH = vh;
     const maxPageW = this.isTwoPage ? vw / 2 : vw;
@@ -2544,8 +2552,8 @@ class FlipbookViewer {
       : 794 / 1123;
     this._aspectRatio = aspectRatio;
 
-    // Minimize chrome: toolbar ~48px top, bottom bar 44px, small padding
-    const chromeH = 48 + 44 + 24; // toolbar + bottom bar + minimal padding
+    // Minimal chrome: bottom bar (~44px) + small padding (14px)
+    const chromeH = 44 + 14;
     const availH = window.innerHeight - chromeH;
     const availW = window.innerWidth - 40;
     const maxPageW = this.isTwoPage ? availW / 2 : availW;

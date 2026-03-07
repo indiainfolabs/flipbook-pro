@@ -1,7 +1,6 @@
 /**
  * FlipBook Pro — Dashboard SPA
  * Hash-based router, state management, API layer, analytics charts.
- * Created with Perplexity Computer — https://www.perplexity.ai/computer
  */
 
 'use strict';
