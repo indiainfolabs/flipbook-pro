@@ -120,6 +120,11 @@
   </div>
 
   <!-- ═══════════════════════════════════════
+       Blurred Background Image (Publuu-style)
+       ═══════════════════════════════════════ -->
+  <div id="viewer-bg-image" aria-hidden="true"></div>
+
+  <!-- ═══════════════════════════════════════
        Main Viewer Stage
        ═══════════════════════════════════════ -->
   <div id="viewer-stage" role="main" aria-label="Flipbook viewer">
@@ -155,6 +160,14 @@
     </div>
 
   </div><!-- /viewer-stage -->
+
+  <!-- ═══════════════════════════════════════
+       Bottom Bar (page info + scrubber + fullscreen)
+       Populated by viewer-app.js _createBottomBar()
+       ═══════════════════════════════════════ -->
+  <div id="viewer-bottom-bar" aria-label="Page navigation bar" role="navigation">
+    <!-- Populated by viewer-app.js -->
+  </div>
 
   <!-- ═══════════════════════════════════════
        Top Toolbar (floating pill, centered)

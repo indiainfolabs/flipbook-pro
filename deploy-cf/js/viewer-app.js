@@ -179,6 +179,9 @@ const ICONS = {
   pause: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>',
   help: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>',
   zoomReset: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><path d="M8 11h6"/><path d="M11 8v6"/><line x1="6" y1="6" x2="8.5" y2="8.5"/></svg>',
+  sun: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>',
+  moon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>',
+  palette: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="13.5" cy="6.5" r=".5"/><circle cx="17.5" cy="10.5" r=".5"/><circle cx="8.5" cy="7.5" r=".5"/><circle cx="6.5" cy="12" r=".5"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"/></svg>',
 };
 
 /* ──────────────────────────────────────────
@@ -503,6 +506,7 @@ class FlipbookViewer {
   async _preloadInitialPages() {
     const toLoad = this.pages.slice(0, Math.min(4, this.pages.length));
     let loaded = 0;
+    const timeout = (ms) => new Promise(resolve => setTimeout(resolve, ms));
     const promises = toLoad.map(p => new Promise(resolve => {
       if (!p.imageUrl) { resolve(); return; }
       const img = new Image();
@@ -514,7 +518,11 @@ class FlipbookViewer {
       img.src = p.imageUrl;
       this.loadedImages.add(p.pageNumber);
     }));
-    await Promise.all(promises);
+    // Race against a 8-second timeout so the viewer never gets stuck on loading
+    await Promise.race([
+      Promise.all(promises),
+      timeout(8000)
+    ]);
   }
 
   /* ── Engine Init ── */
@@ -529,7 +537,9 @@ class FlipbookViewer {
       this._initCSSFlipEngine(pages, settings);
     }
 
+    this._initTheme();
     this.createToolbar();
+    this._createBottomBar();
     this.createThumbnailPanel();
     this.createShareModal();
     this.handleKeyboard();
@@ -547,9 +557,252 @@ class FlipbookViewer {
     this._initFlipSound();
     this._showInitialFlipHint();
     this._onPageChanged(1);
+    this._initBackground();
 
     // Background preload remaining pages (Agent 3: progressive loading)
     this._backgroundPreloadRemaining();
+  }
+
+  /* ── Theme Toggle (Improvement 3) ── */
+  _initTheme() {
+    const saved = localStorage.getItem('fpv_theme') || 'dark';
+    document.documentElement.dataset.theme = saved;
+    this._currentTheme = saved;
+  }
+
+  toggleTheme() {
+    const next = this._currentTheme === 'dark' ? 'light' : 'dark';
+    this._currentTheme = next;
+    document.documentElement.dataset.theme = next;
+    localStorage.setItem('fpv_theme', next);
+    // Update theme button icon
+    const btn = document.getElementById('btn-theme');
+    if (btn) btn.innerHTML = next === 'dark' ? ICONS.moon : ICONS.sun;
+  }
+
+  /* ── Background Options (Improvement 2) ── */
+  _initBackground() {
+    const slug = this.slug || 'default';
+    const saved = localStorage.getItem(`fpv_bg_${slug}`) || 'blurred';
+    this._currentBg = saved;
+
+    // Always set the blurred background image from first page
+    if (this.pages[0] && this.pages[0].imageUrl) {
+      this._setBlurredBackground(this.pages[0].imageUrl);
+    }
+
+    this._applyBackground(saved);
+  }
+
+  _applyBackground(bgValue) {
+    this._currentBg = bgValue;
+    const stage = this.viewerStage;
+    if (!stage) return;
+
+    if (bgValue === 'blurred') {
+      stage.classList.add('has-bg-image');
+      stage.dataset.bgMode = 'blurred';
+      stage.style.background = '';
+    } else {
+      stage.classList.remove('has-bg-image');
+      stage.dataset.bgMode = 'solid';
+      stage.style.background = bgValue;
+    }
+  }
+
+  _setBlurredBackground(imageUrl) {
+    // Apply blurred background directly on #viewer-stage via custom property
+    // This avoids z-index / stacking context issues with child elements
+    const stage = this.viewerStage;
+    if (!stage) return;
+
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      stage.style.setProperty('--bg-image-url', `url("${imageUrl}")`);
+      stage.classList.add('has-bg-image');
+    };
+    img.onerror = () => {
+      // Still try setting — the image may work despite CORS error on preload
+      stage.style.setProperty('--bg-image-url', `url("${imageUrl}")`);
+      stage.classList.add('has-bg-image');
+    };
+    img.src = imageUrl;
+    // Also set immediately in case image is already cached
+    stage.style.setProperty('--bg-image-url', `url("${imageUrl}")`);
+    stage.classList.add('has-bg-image');
+  }
+
+  _openBgPicker() {
+    // Close any existing picker
+    const existing = document.getElementById('bg-picker-popover');
+    if (existing) { existing.remove(); return; }
+
+    const btn = document.getElementById('btn-palette');
+    if (!btn) return;
+
+    const slug = this.slug || 'default';
+    const popover = document.createElement('div');
+    popover.id = 'bg-picker-popover';
+    popover.className = 'bg-picker-popover';
+    popover.innerHTML = `
+      <div class="bg-picker-title">Background</div>
+      <div class="bg-picker-section">
+        <div class="bg-picker-label">Blurred Page (Default)</div>
+        <div class="bg-picker-options">
+          <button class="bg-opt${this._currentBg === 'blurred' ? ' active' : ''}" data-bg="blurred">
+            <span class="bg-opt-preview" style="background:linear-gradient(135deg,#1a1a2e,#16213e);position:relative;overflow:hidden;">
+              <span style="position:absolute;inset:0;backdrop-filter:blur(4px);background:rgba(0,0,0,0.4);"></span>
+            </span>
+            <span class="bg-opt-label">Blurred</span>
+          </button>
+        </div>
+      </div>
+      <div class="bg-picker-section">
+        <div class="bg-picker-label">Solid Colors</div>
+        <div class="bg-picker-options">
+          <button class="bg-opt${this._currentBg === '#0a0a14' ? ' active' : ''}" data-bg="#0a0a14">
+            <span class="bg-opt-preview" style="background:#0a0a14"></span>
+            <span class="bg-opt-label">Dark</span>
+          </button>
+          <button class="bg-opt${this._currentBg === '#0d1117' ? ' active' : ''}" data-bg="#0d1117">
+            <span class="bg-opt-preview" style="background:#0d1117"></span>
+            <span class="bg-opt-label">Midnight</span>
+          </button>
+          <button class="bg-opt${this._currentBg === '#1c1c1c' ? ' active' : ''}" data-bg="#1c1c1c">
+            <span class="bg-opt-preview" style="background:#1c1c1c"></span>
+            <span class="bg-opt-label">Charcoal</span>
+          </button>
+          <button class="bg-opt${this._currentBg === '#f5f5f0' ? ' active' : ''}" data-bg="#f5f5f0">
+            <span class="bg-opt-preview" style="background:#f5f5f0;border:1px solid #ccc"></span>
+            <span class="bg-opt-label">Light</span>
+          </button>
+        </div>
+      </div>
+      <div class="bg-picker-section">
+        <div class="bg-picker-label">Gradients</div>
+        <div class="bg-picker-options">
+          <button class="bg-opt" data-bg="linear-gradient(135deg,#0a0a2e,#1a1040)">
+            <span class="bg-opt-preview" style="background:linear-gradient(135deg,#0a0a2e,#1a1040)"></span>
+            <span class="bg-opt-label">Indigo</span>
+          </button>
+          <button class="bg-opt" data-bg="linear-gradient(135deg,#1a0a2e,#2d1b4e)">
+            <span class="bg-opt-preview" style="background:linear-gradient(135deg,#1a0a2e,#2d1b4e)"></span>
+            <span class="bg-opt-label">Purple</span>
+          </button>
+          <button class="bg-opt" data-bg="linear-gradient(135deg,#0a1a2e,#0d2d40)">
+            <span class="bg-opt-preview" style="background:linear-gradient(135deg,#0a1a2e,#0d2d40)"></span>
+            <span class="bg-opt-label">Ocean</span>
+          </button>
+          <button class="bg-opt" data-bg="linear-gradient(135deg,#1a2a0a,#1a3a1a)">
+            <span class="bg-opt-preview" style="background:linear-gradient(135deg,#1a2a0a,#1a3a1a)"></span>
+            <span class="bg-opt-label">Forest</span>
+          </button>
+          <button class="bg-opt" data-bg="linear-gradient(135deg,#2a0a0a,#3a1010)">
+            <span class="bg-opt-preview" style="background:linear-gradient(135deg,#2a0a0a,#3a1010)"></span>
+            <span class="bg-opt-label">Crimson</span>
+          </button>
+          <button class="bg-opt" data-bg="linear-gradient(135deg,#1a1a1a,#2a2a3a)">
+            <span class="bg-opt-preview" style="background:linear-gradient(135deg,#1a1a1a,#2a2a3a)"></span>
+            <span class="bg-opt-label">Slate</span>
+          </button>
+        </div>
+      </div>
+    `;
+
+    // Position popover above palette button (since toolbar is at top, popover goes below;
+    // but if button is near bottom, open above it)
+    const rect = btn.getBoundingClientRect();
+    popover.style.position = 'fixed';
+    const spaceBelow = window.innerHeight - rect.bottom;
+    const spaceAbove = rect.top;
+    if (spaceBelow > 320 || spaceBelow > spaceAbove) {
+      // Open below
+      popover.style.top = (rect.bottom + 8) + 'px';
+      popover.style.bottom = 'auto';
+    } else {
+      // Open above
+      popover.style.bottom = (window.innerHeight - rect.top + 8) + 'px';
+      popover.style.top = 'auto';
+    }
+    popover.style.left = Math.max(8, Math.min(rect.left, window.innerWidth - 260)) + 'px';
+
+    // Wire up options
+    popover.querySelectorAll('.bg-opt').forEach(optBtn => {
+      optBtn.addEventListener('click', () => {
+        const bgVal = optBtn.dataset.bg;
+        this._applyBackground(bgVal);
+        localStorage.setItem(`fpv_bg_${slug}`, bgVal);
+        popover.remove();
+      });
+    });
+
+    document.body.appendChild(popover);
+
+    // Close on outside click
+    setTimeout(() => {
+      const closeOnOutside = (e) => {
+        if (!popover.contains(e.target) && e.target !== btn) {
+          popover.remove();
+          document.removeEventListener('click', closeOnOutside);
+        }
+      };
+      document.addEventListener('click', closeOnOutside);
+    }, 0);
+  }
+
+  /* ── Bottom Bar (Improvement 4D) ── */
+  _createBottomBar() {
+    // Remove existing scrubber from its position in viewer-stage
+    // and integrate into the new bottom bar
+    let bar = document.getElementById('viewer-bottom-bar');
+    if (!bar) {
+      bar = document.createElement('div');
+      bar.id = 'viewer-bottom-bar';
+      document.getElementById('viewer-root').appendChild(bar);
+    }
+
+    bar.innerHTML = `
+      <span class="bottom-bar-page-info" id="bottom-bar-page-info">1 / ${this.totalPages}</span>
+      <div class="bottom-bar-scrubber">
+        <input type="range" class="page-scrubber-input" id="page-scrubber-input"
+          min="1" max="${this.totalPages}" value="1" step="1"
+          aria-label="Scrub through pages" />
+      </div>
+      <button class="tb-btn bottom-bar-fs" id="btn-fullscreen-bottom"
+        aria-label="Toggle fullscreen" title="Fullscreen (F)">
+        ${ICONS.fullscreen}
+      </button>
+    `;
+
+    const fsBtn = document.getElementById('btn-fullscreen-bottom');
+    if (fsBtn) fsBtn.addEventListener('click', () => this.toggleFullscreen());
+
+    // Hide old scrubber panel (now integrated into bottom bar)
+    const oldScrubber = document.getElementById('page-scrubber');
+    if (oldScrubber) oldScrubber.style.display = 'none';
+  }
+
+  _updateBottomBar() {
+    const info = document.getElementById('bottom-bar-page-info');
+    if (!info) return;
+    // Show page spread format: "X-Y / Z" for two-page, "X / Z" for single
+    if (this.isTwoPage && this.totalPages > 1) {
+      const left = this.currentPage % 2 === 0 ? this.currentPage - 1 : this.currentPage;
+      const right = Math.min(left + 1, this.totalPages);
+      if (right > left) {
+        info.textContent = `${left}-${right} / ${this.totalPages}`;
+      } else {
+        info.textContent = `${left} / ${this.totalPages}`;
+      }
+    } else {
+      info.textContent = `${this.currentPage} / ${this.totalPages}`;
+    }
+
+    const fsBtn = document.getElementById('btn-fullscreen-bottom');
+    if (fsBtn) {
+      fsBtn.innerHTML = this.isFullscreen ? ICONS.compress : ICONS.fullscreen;
+    }
   }
 
   /* ── Progressive Background Loading (Agent 3) ── */
@@ -590,9 +843,9 @@ class FlipbookViewer {
       ? (pages[0].width || 794) / (pages[0].height || 1123)
       : 794 / 1123;
 
-    const viewH = window.innerHeight - 100 - parseInt(getComputedStyle(document.documentElement).getPropertyValue('--toolbar-h'));
-    const maxH = Math.min(viewH, 780);
-    const pageH = maxH;
+    const chromeH = 48 + 44 + 24; // toolbar + bottom bar + minimal padding
+    const viewH = window.innerHeight - chromeH;
+    const pageH = viewH;
     const pageW = Math.round(pageH * aspectRatio);
 
     const bookW = this.isTwoPage ? pageW * 2 : pageW;
@@ -862,14 +1115,19 @@ class FlipbookViewer {
     this._updateToolbarState();
     this._updateThumbnails();
     this._updateScrubber();
+    this._updateBottomBar();
     this.trackEvent('page_view', { page_number: page });
     this._preloadAdjacent(page);
+    // Blurred background: set first page image
+    if (page === 1 && this.pages[0] && this.pages[0].imageUrl) {
+      this._setBlurredBackground(this.pages[0].imageUrl);
+    }
     this._announceToScreenReader(`Page ${page} of ${this.totalPages}`);
   }
 
   _preloadAdjacent(page) {
     const toPreload = [];
-    for (let i = -2; i <= 2; i++) {
+    for (let i = -6; i <= 6; i++) {
       const p = page + i;
       if (p >= 1 && p <= this.totalPages && !this.loadedImages.has(p)) {
         toPreload.push(p);
@@ -1019,6 +1277,18 @@ class FlipbookViewer {
           aria-label="Keyboard shortcuts" title="Shortcuts (?)">
           ${ICONS.help}
         </button>
+
+        <div class="tb-divider" aria-hidden="true"></div>
+
+        <button class="tb-btn" id="btn-palette"
+          aria-label="Background options" title="Background">
+          ${ICONS.palette}
+        </button>
+
+        <button class="tb-btn" id="btn-theme"
+          aria-label="Toggle light/dark theme" title="Toggle theme">
+          ${this._currentTheme === 'dark' ? ICONS.moon : ICONS.sun}
+        </button>
       </div>
     `;
 
@@ -1067,6 +1337,11 @@ class FlipbookViewer {
     dl && dl.addEventListener('click', () => this._handleDownload());
     autoplay && autoplay.addEventListener('click', () => this.toggleAutoPlay());
     help && help.addEventListener('click', () => this._toggleShortcutsOverlay());
+
+    const palette = get('btn-palette');
+    const theme = get('btn-theme');
+    palette && palette.addEventListener('click', () => this._openBgPicker());
+    theme && theme.addEventListener('click', () => this.toggleTheme());
   }
 
   _updateToolbarState() {
@@ -1692,6 +1967,12 @@ class FlipbookViewer {
       btn.classList.toggle('active', this.isFullscreen);
       btn.setAttribute('aria-pressed', this.isFullscreen ? 'true' : 'false');
     }
+    // Update bottom bar fullscreen button
+    const fsBtn = document.getElementById('btn-fullscreen-bottom');
+    if (fsBtn) {
+      fsBtn.innerHTML = this.isFullscreen ? ICONS.compress : ICONS.fullscreen;
+      fsBtn.classList.toggle('active', this.isFullscreen);
+    }
     this._announceToScreenReader(this.isFullscreen ? 'Fullscreen mode enabled' : 'Fullscreen mode disabled');
     setTimeout(() => this._onResize(), 100);
   }
@@ -1887,8 +2168,8 @@ class FlipbookViewer {
     if (!flipEl || !this._aspectRatio) return;
 
     const container = this.flipbookContainer;
-    const vw = container ? container.clientWidth - 40 : window.innerWidth - 40;
-    const vh = container ? container.clientHeight - 40 : window.innerHeight - 120;
+    const vw = container ? container.clientWidth - 20 : window.innerWidth - 40;
+    const vh = container ? container.clientHeight - 8 : window.innerHeight - 116;
 
     const maxPageH = vh;
     const maxPageW = this.isTwoPage ? vw / 2 : vw;
@@ -2263,9 +2544,11 @@ class FlipbookViewer {
       : 794 / 1123;
     this._aspectRatio = aspectRatio;
 
-    const availH = window.innerHeight - 140;
-    const availW = window.innerWidth - 60;
-    const maxPageW = this.isTwoPage ? Math.min(availW / 2, 550) : Math.min(availW, 650);
+    // Minimize chrome: toolbar ~48px top, bottom bar 44px, small padding
+    const chromeH = 48 + 44 + 24; // toolbar + bottom bar + minimal padding
+    const availH = window.innerHeight - chromeH;
+    const availW = window.innerWidth - 40;
+    const maxPageW = this.isTwoPage ? availW / 2 : availW;
     let pageW = maxPageW;
     let pageH = Math.round(pageW / aspectRatio);
     if (pageH > availH) {

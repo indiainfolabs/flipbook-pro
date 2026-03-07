@@ -294,7 +294,7 @@ async function handleDeleteFlipbook(id, request, env) {
 // ============================================================
 
 async function handleGetPage(flipbookId, pageNum, env) {
-  // Try webp first, then png, then fall back to SVG placeholder
+  // Try webp first, then jpg, then png, then fall back to SVG placeholder
   const webpKey = `${flipbookId}/page_${pageNum}.webp`;
   const webpObject = await env.UPLOADS.get(webpKey);
 
@@ -302,6 +302,19 @@ async function handleGetPage(flipbookId, pageNum, env) {
     return new Response(webpObject.body, {
       headers: {
         'Content-Type': 'image/webp',
+        'Cache-Control': 'public, max-age=31536000, immutable',
+        ...CORS_HEADERS,
+      },
+    });
+  }
+
+  const jpgKey = `${flipbookId}/page_${pageNum}.jpg`;
+  const jpgObject = await env.UPLOADS.get(jpgKey);
+
+  if (jpgObject) {
+    return new Response(jpgObject.body, {
+      headers: {
+        'Content-Type': 'image/jpeg',
         'Cache-Control': 'public, max-age=31536000, immutable',
         ...CORS_HEADERS,
       },
@@ -326,7 +339,7 @@ async function handleGetPage(flipbookId, pageNum, env) {
 }
 
 async function handleGetThumb(flipbookId, pageNum, env) {
-  // Try webp thumb first, then png thumb, then fall back to placeholder
+  // Try webp thumb first, then jpg thumb, then png thumb, then fall back to placeholder
   const webpKey = `${flipbookId}/thumbs/page_${pageNum}_thumb.webp`;
   const webpObject = await env.UPLOADS.get(webpKey);
 
@@ -334,6 +347,19 @@ async function handleGetThumb(flipbookId, pageNum, env) {
     return new Response(webpObject.body, {
       headers: {
         'Content-Type': 'image/webp',
+        'Cache-Control': 'public, max-age=31536000, immutable',
+        ...CORS_HEADERS,
+      },
+    });
+  }
+
+  const jpgKey = `${flipbookId}/thumbs/page_${pageNum}_thumb.jpg`;
+  const jpgObject = await env.UPLOADS.get(jpgKey);
+
+  if (jpgObject) {
+    return new Response(jpgObject.body, {
+      headers: {
+        'Content-Type': 'image/jpeg',
         'Cache-Control': 'public, max-age=31536000, immutable',
         ...CORS_HEADERS,
       },
@@ -374,7 +400,7 @@ async function handleUploadPage(flipbookId, pageNum, request, env) {
   if (!flipbook) return error('Flipbook not found', 404);
 
   const contentType = request.headers.get('Content-Type') || 'image/png';
-  const ext = contentType.includes('webp') ? 'webp' : 'png';
+  const ext = contentType.includes('webp') ? 'webp' : (contentType.includes('jpeg') || contentType.includes('jpg')) ? 'jpg' : 'png';
   const key = `${flipbookId}/page_${pageNum}.${ext}`;
 
   await env.UPLOADS.put(key, request.body, {
@@ -404,7 +430,7 @@ async function handleUploadPageForm(flipbookId, request, env) {
   if (!file) return error('No file provided');
 
   const contentType = file.type || 'image/png';
-  const ext = contentType.includes('webp') ? 'webp' : 'png';
+  const ext = contentType.includes('webp') ? 'webp' : (contentType.includes('jpeg') || contentType.includes('jpg')) ? 'jpg' : 'png';
   const key = `${flipbookId}/page_${pageNum}.${ext}`;
 
   await env.UPLOADS.put(key, file.stream(), {

@@ -648,28 +648,26 @@ async function processUpload(file) {
     const flipbookId = createResp.id;
     if (!flipbookId) throw new Error('API did not return a flipbook id');
 
-    // Step 3: Render each PDF page to a PNG and upload
-    for (let pageNum = 1; pageNum <= totalPages; pageNum++) {
-      const renderPct = Math.round(8 + ((pageNum - 1) / totalPages) * 82);
-      setProgress(renderPct, `Rendering page ${pageNum} of ${totalPages}…`);
+    // Step 3: Render each PDF page to a JPEG and upload (3 concurrent batches)
+    const BATCH_SIZE = 3;
+    let completedPages = 0;
 
-      // Render page at 2x scale for quality
+    const renderAndUploadPage = async (pageNum) => {
+      // Render page at 1.5x scale for quality/speed balance
       const page = await pdf.getPage(pageNum);
-      const viewport = page.getViewport({ scale: 2.0 });
+      const viewport = page.getViewport({ scale: 1.5 });
       const canvas = document.createElement('canvas');
       canvas.width = viewport.width;
       canvas.height = viewport.height;
       const ctx = canvas.getContext('2d');
       await page.render({ canvasContext: ctx, viewport }).promise;
 
-      // Convert canvas to PNG blob
-      const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png', 0.92));
+      // Convert canvas to JPEG blob (3-5x smaller than PNG)
+      const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.82));
 
       // Upload page image
-      const uploadPct = Math.round(8 + (pageNum / totalPages) * 82);
-      setProgress(uploadPct, `Uploading page ${pageNum} of ${totalPages}…`);
       const formData = new FormData();
-      formData.append('file', blob, `page-${pageNum}.png`);
+      formData.append('file', blob, `page-${pageNum}.jpg`);
       formData.append('page_num', String(pageNum));
       const headers = {};
       if (state.token) headers['Authorization'] = `Bearer ${state.token}`;
@@ -678,6 +676,22 @@ async function processUpload(file) {
         headers,
         body: formData,
       }).then(r => { if (!r.ok) throw new Error(`Page upload failed: ${r.status}`); });
+
+      completedPages++;
+      const pct = Math.round(8 + (completedPages / totalPages) * 82);
+      setProgress(pct, `Uploading page ${completedPages} of ${totalPages}…`);
+    };
+
+    // Process pages in parallel batches of BATCH_SIZE
+    for (let batchStart = 1; batchStart <= totalPages; batchStart += BATCH_SIZE) {
+      const batchEnd = Math.min(batchStart + BATCH_SIZE - 1, totalPages);
+      const batchNums = [];
+      for (let i = batchStart; i <= batchEnd; i++) batchNums.push(i);
+
+      const renderPct = Math.round(8 + ((batchStart - 1) / totalPages) * 82);
+      setProgress(renderPct, `Rendering pages ${batchStart}–${batchEnd} of ${totalPages}…`);
+
+      await Promise.all(batchNums.map(n => renderAndUploadPage(n)));
     }
 
     // Step 4: Publish the flipbook
