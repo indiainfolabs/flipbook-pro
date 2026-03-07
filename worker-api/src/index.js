@@ -22,7 +22,7 @@ function error(message, status = 400) {
 }
 
 function generateId() {
-  return crypto.randomUUID().replace(/-/g, '');
+  return 'fb_' + Date.now() + '_' + Math.random().toString(36).slice(2, 9);
 }
 
 async function hashPassword(password) {
@@ -59,31 +59,37 @@ export default {
       if (path === '/api/flipbooks' && method === 'GET') return handleListFlipbooks(request, env);
       if (path === '/api/flipbooks' && method === 'POST') return handleCreateFlipbook(request, env);
 
-      const flipbookMatch = path.match(/^\/api\/flipbooks\/([a-f0-9]+)$/);
+      // Broader ID pattern: hex UUID (no dashes), fb_timestamp_rand, or any alphanumeric+underscore+dash
+      const flipbookMatch = path.match(/^\/api\/flipbooks\/([a-zA-Z0-9_-]+)$/);
       if (flipbookMatch && method === 'GET') return handleGetFlipbook(flipbookMatch[1], env);
       if (flipbookMatch && method === 'PUT') return handleUpdateFlipbook(flipbookMatch[1], request, env);
       if (flipbookMatch && method === 'DELETE') return handleDeleteFlipbook(flipbookMatch[1], request, env);
 
-      // Page images
-      const pageMatch = path.match(/^\/api\/flipbooks\/([a-f0-9]+)\/pages\/(\d+)$/);
+      // Page image upload (POST) and retrieval (GET)
+      const pageMatch = path.match(/^\/api\/flipbooks\/([a-zA-Z0-9_-]+)\/pages\/(\d+)$/);
       if (pageMatch && method === 'GET') return handleGetPage(pageMatch[1], parseInt(pageMatch[2]), env);
+      if (pageMatch && method === 'POST') return handleUploadPage(pageMatch[1], parseInt(pageMatch[2]), request, env);
 
-      const thumbMatch = path.match(/^\/api\/flipbooks\/([a-f0-9]+)\/pages\/(\d+)\/thumb$/);
+      // Also support POST /api/flipbooks/:id/pages (page_num in form body)
+      const pagesCollectionMatch = path.match(/^\/api\/flipbooks\/([a-zA-Z0-9_-]+)\/pages$/);
+      if (pagesCollectionMatch && method === 'POST') return handleUploadPageForm(pagesCollectionMatch[1], request, env);
+
+      const thumbMatch = path.match(/^\/api\/flipbooks\/([a-zA-Z0-9_-]+)\/pages\/(\d+)\/thumb$/);
       if (thumbMatch && method === 'GET') return handleGetThumb(thumbMatch[1], parseInt(thumbMatch[2]), env);
 
-      // Upload
-      if (path === '/api/upload' && method === 'POST') return handleUpload(request, env);
-
       // Analytics
-      const analyticsMatch = path.match(/^\/api\/flipbooks\/([a-f0-9]+)\/analytics$/);
+      const analyticsMatch = path.match(/^\/api\/flipbooks\/([a-zA-Z0-9_-]+)\/analytics$/);
       if (analyticsMatch && method === 'GET') return handleGetAnalytics(analyticsMatch[1], env);
       if (analyticsMatch && method === 'POST') return handleTrackView(analyticsMatch[1], request, env);
 
       // General analytics track endpoint
       if (path === '/api/analytics/track' && method === 'POST') return handleGeneralTrack(request, env);
 
-      // Viewer data
-      const viewerMatch = path.match(/^\/api\/viewer\/([a-f0-9]+)$/);
+      // Upload PDF
+      if (path === '/api/upload' && method === 'POST') return handleUpload(request, env);
+
+      // Viewer data — accept any ID format
+      const viewerMatch = path.match(/^\/api\/viewer\/([a-zA-Z0-9_-]+)$/);
       if (viewerMatch && method === 'GET') return handleViewerData(viewerMatch[1], env, request);
 
       return error('Not found', 404);
@@ -219,12 +225,13 @@ async function handleCreateFlipbook(request, env) {
   const body = await request.json().catch(() => ({}));
   const id = generateId();
   const title = body.title || 'Untitled Flipbook';
+  const pageCount = body.page_count || 0;
 
   await env.DB.prepare(
-    'INSERT INTO flipbooks (id, user_id, title) VALUES (?, ?, ?)'
-  ).bind(id, user.id, title).run();
+    'INSERT INTO flipbooks (id, user_id, title, page_count) VALUES (?, ?, ?, ?)'
+  ).bind(id, user.id, title, pageCount).run();
 
-  return json({ id, title, status: 'draft', pageCount: 0 }, 201);
+  return json({ id, title, status: 'draft', pageCount }, 201);
 }
 
 async function handleGetFlipbook(id, env) {
@@ -249,6 +256,8 @@ async function handleUpdateFlipbook(id, request, env) {
   if (body.title !== undefined) { updates.push('title = ?'); values.push(body.title); }
   if (body.status !== undefined) { updates.push('status = ?'); values.push(body.status); }
   if (body.settings !== undefined) { updates.push('settings = ?'); values.push(JSON.stringify(body.settings)); }
+  if (body.page_count !== undefined) { updates.push('page_count = ?'); values.push(body.page_count); }
+  if (body.pageCount !== undefined) { updates.push('page_count = ?'); values.push(body.pageCount); }
 
   if (updates.length === 0) return error('No fields to update');
 
@@ -284,38 +293,132 @@ async function handleDeleteFlipbook(id, request, env) {
 // ============================================================
 
 async function handleGetPage(flipbookId, pageNum, env) {
-  const key = `${flipbookId}/page_${pageNum}.webp`;
-  const object = await env.UPLOADS.get(key);
+  // Try webp first, then png, then fall back to SVG placeholder
+  const webpKey = `${flipbookId}/page_${pageNum}.webp`;
+  const webpObject = await env.UPLOADS.get(webpKey);
 
-  if (!object) {
-    // Return a generated placeholder page
-    return generatePlaceholderPage(pageNum);
+  if (webpObject) {
+    return new Response(webpObject.body, {
+      headers: {
+        'Content-Type': 'image/webp',
+        'Cache-Control': 'public, max-age=31536000, immutable',
+        ...CORS_HEADERS,
+      },
+    });
   }
 
-  return new Response(object.body, {
-    headers: {
-      'Content-Type': 'image/webp',
-      'Cache-Control': 'public, max-age=31536000, immutable',
-      ...CORS_HEADERS,
-    },
-  });
+  const pngKey = `${flipbookId}/page_${pageNum}.png`;
+  const pngObject = await env.UPLOADS.get(pngKey);
+
+  if (pngObject) {
+    return new Response(pngObject.body, {
+      headers: {
+        'Content-Type': 'image/png',
+        'Cache-Control': 'public, max-age=31536000, immutable',
+        ...CORS_HEADERS,
+      },
+    });
+  }
+
+  // Fall back to SVG placeholder
+  return generatePlaceholderPage(pageNum);
 }
 
 async function handleGetThumb(flipbookId, pageNum, env) {
-  const key = `${flipbookId}/thumbs/page_${pageNum}_thumb.webp`;
-  const object = await env.UPLOADS.get(key);
+  // Try webp thumb first, then png thumb, then fall back to placeholder
+  const webpKey = `${flipbookId}/thumbs/page_${pageNum}_thumb.webp`;
+  const webpObject = await env.UPLOADS.get(webpKey);
 
-  if (!object) {
-    return generatePlaceholderPage(pageNum, true);
+  if (webpObject) {
+    return new Response(webpObject.body, {
+      headers: {
+        'Content-Type': 'image/webp',
+        'Cache-Control': 'public, max-age=31536000, immutable',
+        ...CORS_HEADERS,
+      },
+    });
   }
 
-  return new Response(object.body, {
-    headers: {
-      'Content-Type': 'image/webp',
-      'Cache-Control': 'public, max-age=31536000, immutable',
-      ...CORS_HEADERS,
-    },
+  const pngKey = `${flipbookId}/thumbs/page_${pageNum}_thumb.png`;
+  const pngObject = await env.UPLOADS.get(pngKey);
+
+  if (pngObject) {
+    return new Response(pngObject.body, {
+      headers: {
+        'Content-Type': 'image/png',
+        'Cache-Control': 'public, max-age=31536000, immutable',
+        ...CORS_HEADERS,
+      },
+    });
+  }
+
+  return generatePlaceholderPage(pageNum, true);
+}
+
+// ============================================================
+// Page Image Upload (client-side rendered pages)
+// ============================================================
+
+/**
+ * POST /api/flipbooks/:id/pages/:num
+ * Accepts image body directly (Content-Type: image/png or image/webp)
+ */
+async function handleUploadPage(flipbookId, pageNum, request, env) {
+  const token = getToken(request);
+  const user = await getUserFromToken(token, env.DB);
+  if (!user) return error('Unauthorized', 401);
+
+  // Verify the flipbook belongs to this user
+  const flipbook = await env.DB.prepare('SELECT * FROM flipbooks WHERE id = ? AND user_id = ?').bind(flipbookId, user.id).first();
+  if (!flipbook) return error('Flipbook not found', 404);
+
+  const contentType = request.headers.get('Content-Type') || 'image/png';
+  const ext = contentType.includes('webp') ? 'webp' : 'png';
+  const key = `${flipbookId}/page_${pageNum}.${ext}`;
+
+  await env.UPLOADS.put(key, request.body, {
+    httpMetadata: { contentType }
   });
+
+  return json({ success: true, key, pageNum });
+}
+
+/**
+ * POST /api/flipbooks/:id/pages
+ * Accepts multipart form with `file` (image) and `page_num`
+ */
+async function handleUploadPageForm(flipbookId, request, env) {
+  const token = getToken(request);
+  const user = await getUserFromToken(token, env.DB);
+  if (!user) return error('Unauthorized', 401);
+
+  // Verify the flipbook belongs to this user
+  const flipbook = await env.DB.prepare('SELECT * FROM flipbooks WHERE id = ? AND user_id = ?').bind(flipbookId, user.id).first();
+  if (!flipbook) return error('Flipbook not found', 404);
+
+  const formData = await request.formData();
+  const file = formData.get('file');
+  const pageNum = parseInt(formData.get('page_num') || '1', 10);
+
+  if (!file) return error('No file provided');
+
+  const contentType = file.type || 'image/png';
+  const ext = contentType.includes('webp') ? 'webp' : 'png';
+  const key = `${flipbookId}/page_${pageNum}.${ext}`;
+
+  await env.UPLOADS.put(key, file.stream(), {
+    httpMetadata: { contentType }
+  });
+
+  // Update page_count if this page exceeds current count
+  const currentCount = flipbook.page_count || 0;
+  if (pageNum > currentCount) {
+    await env.DB.prepare(
+      "UPDATE flipbooks SET page_count = ?, updated_at = datetime('now') WHERE id = ?"
+    ).bind(pageNum, flipbookId).run();
+  }
+
+  return json({ success: true, key, pageNum });
 }
 
 function generatePlaceholderPage(pageNum, isThumb = false) {
@@ -343,7 +446,7 @@ function generatePlaceholderPage(pageNum, isThumb = false) {
 }
 
 // ============================================================
-// Upload Handler
+// Upload Handler (PDF)
 // ============================================================
 
 async function handleUpload(request, env) {
@@ -353,9 +456,14 @@ async function handleUpload(request, env) {
 
   const formData = await request.formData();
   const file = formData.get('file');
-  const flipbookId = formData.get('flipbookId') || generateId();
+  let flipbookId = formData.get('flipbookId') || formData.get('flipbook_id');
 
   if (!file) return error('No file uploaded');
+
+  // Generate a new ID if none provided
+  if (!flipbookId) {
+    flipbookId = generateId();
+  }
 
   // Store the raw PDF in R2
   const pdfKey = `${flipbookId}/original.pdf`;
@@ -363,19 +471,29 @@ async function handleUpload(request, env) {
     httpMetadata: { contentType: 'application/pdf' }
   });
 
-  // For demo purposes, create placeholder pages (real implementation would use a PDF renderer)
-  const pageCount = 8; // Demo: 8 pages
-  
-  await env.DB.prepare(
-    `INSERT OR REPLACE INTO flipbooks (id, user_id, title, page_count, status, updated_at) 
-     VALUES (?, ?, ?, ?, 'published', datetime('now'))`
-  ).bind(flipbookId, user.id, file.name?.replace('.pdf', '') || 'Uploaded Flipbook', pageCount).run();
+  const title = (file.name || 'Uploaded Flipbook').replace(/\.pdf$/i, '');
+  const pdfUrl = `/api/flipbooks/${flipbookId}/pdf`;
+
+  // Create or update the flipbook record — page_count starts at 0 (pages uploaded separately)
+  const existing = await env.DB.prepare('SELECT id FROM flipbooks WHERE id = ?').bind(flipbookId).first();
+
+  if (existing) {
+    await env.DB.prepare(
+      "UPDATE flipbooks SET title = ?, status = 'processing', updated_at = datetime('now') WHERE id = ?"
+    ).bind(title, flipbookId).run();
+  } else {
+    await env.DB.prepare(
+      `INSERT INTO flipbooks (id, user_id, title, page_count, status) VALUES (?, ?, ?, 0, 'processing')`
+    ).bind(flipbookId, user.id, title).run();
+  }
 
   return json({
     id: flipbookId,
-    pageCount,
-    title: file.name?.replace('.pdf', '') || 'Uploaded Flipbook',
-    status: 'published'
+    title,
+    status: 'processing',
+    pdfUrl,
+    pageCount: 0,
+    page_count: 0,
   }, 201);
 }
 
@@ -458,22 +576,32 @@ async function handleViewerData(flipbookId, env, request) {
 
   const settings = JSON.parse(flipbook.settings || '{}');
   const origin = new URL(request.url).origin;
+  const pageCount = flipbook.page_count || 0;
+
+  // Build page list — use actual uploaded images if available, or SVG placeholders
+  const pages = Array.from({ length: pageCount }, (_, i) => {
+    const num = i + 1;
+    const imageUrl = `${origin}/api/flipbooks/${flipbook.id}/pages/${num}`;
+    const thumbUrl = `${origin}/api/flipbooks/${flipbook.id}/pages/${num}/thumb`;
+    return {
+      num,
+      pageNumber: num,
+      imageUrl,
+      image_url: imageUrl,
+      thumbUrl,
+      thumb_url: thumbUrl,
+      width: 794,
+      height: 1123,
+    };
+  });
 
   return json({
     id: flipbook.id,
     title: flipbook.title,
-    pageCount: flipbook.page_count || 8,
+    pageCount,
+    page_count: pageCount,
     status: flipbook.status,
     settings,
-    pages: Array.from({ length: flipbook.page_count || 8 }, (_, i) => ({
-      num: i + 1,
-      pageNumber: i + 1,
-      imageUrl: `${origin}/api/flipbooks/${flipbook.id}/pages/${i + 1}`,
-      image_url: `${origin}/api/flipbooks/${flipbook.id}/pages/${i + 1}`,
-      thumbUrl: `${origin}/api/flipbooks/${flipbook.id}/pages/${i + 1}/thumb`,
-      thumb_url: `${origin}/api/flipbooks/${flipbook.id}/pages/${i + 1}/thumb`,
-      width: 794,
-      height: 1123,
-    }))
+    pages,
   });
 }

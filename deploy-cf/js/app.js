@@ -649,81 +649,113 @@ async function processUpload(file) {
   const bar = document.getElementById('progress-bar');
   const statusEl = document.getElementById('progress-status');
 
-  // Simulate PDF processing (real XHR upload would use XMLHttpRequest with progress events)
-  const totalPages = Math.floor(Math.random() * 40) + 10;
-  let processed = 0;
-
-  statusEl.textContent = 'Uploading PDF…';
-  bar.style.width = '5%';
-  await sleep(400);
-
-  // Simulate page-by-page processing
-  const processPage = async () => {
-    if (processed < totalPages) {
-      processed++;
-      const pct = Math.round((processed / totalPages) * 85) + 10;
-      bar.style.width = pct + '%';
-      statusEl.textContent = `Processing page ${processed} of ${totalPages}…`;
-      await sleep(80 + Math.random() * 60);
-      return processPage();
-    }
+  const setProgress = (pct, msg) => {
+    bar.style.width = pct + '%';
+    if (statusEl) statusEl.textContent = msg;
   };
 
-  await processPage();
-
-  bar.style.width = '100%';
-  statusEl.textContent = 'Finalising…';
-  await sleep(500);
-
-  // Build the flipbook data object
-  const fbData = {
-    title: file.name.replace(/\.pdf$/i, '').replace(/[-_]/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
-    page_count: totalPages,
-    status: 'draft',
-    visibility: 'private',
-    view_count: 0,
-    thumbnail_url: null,
-    settings: {
-      backgroundColor: '#ffffff', flippingTime: 800, showPageNumbers: true,
-      showThumbnails: true, maxShadowOpacity: 0.5, autoPlay: false,
-      flipSound: true, rtl: false, showCover: true, showPageCorners: true,
-      branding: { primaryColor: '#2563eb', showBranding: true, brandingText: '' },
-    },
-  };
-
-  // Create flipbook entry via API (falls back to local mock if unavailable)
-  let newFb;
   try {
-    newFb = await api.createFlipbook(fbData);
-    // Ensure all expected fields are present (API may omit some)
-    newFb = { ...fbData, ...newFb };
-  } catch {
-    newFb = {
-      id: 'fb_' + Date.now(),
-      slug: 'flipbook-' + Date.now(),
+    // Step 1: Load PDF.js and parse the PDF
+    setProgress(2, 'Loading PDF…');
+    const pdfjsLib = await import('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.2.67/pdf.min.mjs');
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.2.67/pdf.worker.min.mjs';
+
+    const arrayBuffer = await file.arrayBuffer();
+    setProgress(5, 'Parsing PDF…');
+    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+    const totalPages = pdf.numPages;
+
+    const title = file.name.replace(/\.pdf$/i, '').replace(/[-_]/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+
+    // Step 2: Create the flipbook record via API
+    setProgress(8, 'Creating flipbook…');
+    const createResp = await api.request('POST', '/api/flipbooks', { title, page_count: totalPages });
+    const flipbookId = createResp.id;
+    if (!flipbookId) throw new Error('API did not return a flipbook id');
+
+    // Step 3: Render each PDF page to a PNG and upload
+    for (let pageNum = 1; pageNum <= totalPages; pageNum++) {
+      const renderPct = Math.round(8 + ((pageNum - 1) / totalPages) * 82);
+      setProgress(renderPct, `Rendering page ${pageNum} of ${totalPages}…`);
+
+      // Render page at 2x scale for quality
+      const page = await pdf.getPage(pageNum);
+      const viewport = page.getViewport({ scale: 2.0 });
+      const canvas = document.createElement('canvas');
+      canvas.width = viewport.width;
+      canvas.height = viewport.height;
+      const ctx = canvas.getContext('2d');
+      await page.render({ canvasContext: ctx, viewport }).promise;
+
+      // Convert canvas to PNG blob
+      const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png', 0.92));
+
+      // Upload page image
+      const uploadPct = Math.round(8 + (pageNum / totalPages) * 82);
+      setProgress(uploadPct, `Uploading page ${pageNum} of ${totalPages}…`);
+      const formData = new FormData();
+      formData.append('file', blob, `page-${pageNum}.png`);
+      formData.append('page_num', String(pageNum));
+      const headers = {};
+      if (state.token) headers['Authorization'] = `Bearer ${state.token}`;
+      await fetch(`${API}/api/flipbooks/${flipbookId}/pages`, {
+        method: 'POST',
+        headers,
+        body: formData,
+      }).then(r => { if (!r.ok) throw new Error(`Page upload failed: ${r.status}`); });
+    }
+
+    // Step 4: Publish the flipbook
+    setProgress(95, 'Finalising…');
+    await api.request('PUT', `/api/flipbooks/${flipbookId}`, { status: 'published' });
+
+    setProgress(100, 'Done!');
+
+    // Build local state object
+    const newFb = {
+      id: flipbookId,
+      title,
+      page_count: totalPages,
+      status: 'published',
+      visibility: 'private',
+      view_count: 0,
+      thumbnail_url: null,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
-      ...fbData,
+      settings: {
+        backgroundColor: '#ffffff', flippingTime: 800, showPageNumbers: true,
+        showThumbnails: true, maxShadowOpacity: 0.5, autoPlay: false,
+        flipSound: true, rtl: false, showCover: true, showPageCorners: true,
+        branding: { primaryColor: '#2563eb', showBranding: true, brandingText: '' },
+      },
     };
-  }
 
-  state.flipbooks.unshift(newFb);
-  state.lastUploadedFlipbook = newFb;
-  state.pendingUploadFile = null;
-  showToast(`"${newFb.title}" processed — ${totalPages} pages`, 'success');
+    state.flipbooks.unshift(newFb);
+    state.lastUploadedFlipbook = newFb;
+    state.pendingUploadFile = null;
+    showToast(`"${newFb.title}" uploaded — ${totalPages} pages`, 'success');
 
-  // Show success state
-  const successEl = document.getElementById('upload-success-state');
-  const progressWrap2 = document.getElementById('upload-progress');
-  if (successEl) {
-    if (progressWrap2) progressWrap2.classList.remove('show');
-    const titleEl = document.getElementById('success-flipbook-title');
-    const pagesCountEl = document.getElementById('success-page-count');
-    if (titleEl) titleEl.textContent = newFb.title;
-    if (pagesCountEl) pagesCountEl.textContent = `${totalPages} pages`;
-    successEl.classList.remove('hidden');
-  } else {
-    navigate('editor', newFb.id);
+    // Show success state
+    const successEl = document.getElementById('upload-success-state');
+    const progressWrap2 = document.getElementById('upload-progress');
+    if (successEl) {
+      if (progressWrap2) progressWrap2.classList.remove('show');
+      const titleEl = document.getElementById('success-flipbook-title');
+      const pagesCountEl = document.getElementById('success-page-count');
+      if (titleEl) titleEl.textContent = newFb.title;
+      if (pagesCountEl) pagesCountEl.textContent = `${totalPages} pages`;
+      successEl.classList.remove('hidden');
+    } else {
+      navigate('editor', newFb.id);
+    }
+
+  } catch (err) {
+    console.error('processUpload error:', err);
+    showToast('Upload failed: ' + (err.message || 'Unknown error'), 'error');
+    // Reset UI
+    const progressWrap3 = document.getElementById('upload-progress');
+    if (progressWrap3) progressWrap3.classList.remove('show');
+    document.getElementById('upload-zone').style.display = '';
   }
 }
 
@@ -735,7 +767,7 @@ function goToUploadedFlipbook() {
 
 function viewUploadedFlipbook() {
   if (state.lastUploadedFlipbook) {
-    const url = `viewer.html?id=${state.lastUploadedFlipbook.slug}`;
+    const url = `viewer.html?id=${state.lastUploadedFlipbook.id}`;
     window.open(url, '_blank', 'noopener');
   }
 }
