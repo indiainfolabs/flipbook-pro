@@ -1,0 +1,1242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<!--
+   ______                            __
+  / ____/___  ____ ___  ____  __  __/ /____  _____
+ / /   / __ \/ __ `__ \/ __ \/ / / / __/ _ \/ ___/
+/ /___/ /_/ / / / / / / /_/ / /_/ / /_/  __/ /
+\____/\____/_/ /_/ /_/ .___/\__,_/\__/\___/_/
+                    /_/
+        Created with Perplexity Computer
+        https://www.perplexity.ai/computer
+-->
+
+<!-- Perplexity Computer Attribution — SEO Meta Tags -->
+<meta name="generator" content="Perplexity Computer">
+<meta name="author" content="Perplexity Computer">
+<meta property="og:see_also" content="https://www.perplexity.ai/computer">
+<link rel="author" href="https://www.perplexity.ai/computer">
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FlipBook Pro — Dashboard</title>
+<meta name="description" content="FlipBook Pro SaaS Dashboard — Create and manage interactive flipbooks from your PDFs.">
+
+<!-- Google Fonts: Inter -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+
+<!-- Lucide Icons -->
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+
+<!-- Styles -->
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════════════════
+     AUTH VIEWS — shown when not logged in
+═══════════════════════════════════════════════════════════════ -->
+
+<!-- LOGIN VIEW -->
+<div id="view-login" class="hidden">
+  <div class="auth-layout">
+    <div class="auth-bg-pattern"></div>
+    <div class="auth-card">
+      <div class="auth-logo">
+        <!-- FlipBook Pro Logo -->
+        <svg class="auth-logo-icon" width="36" height="36" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="FlipBook Pro">
+          <rect width="36" height="36" rx="8" fill="#2563eb"/>
+          <rect x="8" y="6" width="13" height="18" rx="2" fill="white" opacity="0.9"/>
+          <rect x="15" y="8" width="13" height="18" rx="2" fill="white" opacity="0.6"/>
+          <path d="M11 11h7M11 14h7M11 17h5" stroke="#2563eb" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+        <span class="auth-logo-text">FlipBook Pro</span>
+      </div>
+      <h1 class="auth-title">Welcome back</h1>
+      <p class="auth-subtitle">Sign in to your account to manage your flipbooks.</p>
+      <div id="login-error" class="auth-error" role="alert"></div>
+      <form id="login-form" novalidate>
+        <div class="form-group">
+          <label class="form-label required" for="login-email">Email address</label>
+          <input class="form-input" id="login-email" type="email" placeholder="you@example.com" autocomplete="email" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label required" for="login-password">Password</label>
+          <input class="form-input" id="login-password" type="password" placeholder="••••••••" autocomplete="current-password" required>
+        </div>
+        <button type="submit" class="btn btn-primary w-full btn-lg" id="login-submit" style="margin-top: 8px;">
+          <span>Sign in</span>
+        </button>
+      </form>
+      <div class="auth-footer">
+        Don't have an account? <a href="#register">Create one free</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- REGISTER VIEW -->
+<div id="view-register" class="hidden">
+  <div class="auth-layout">
+    <div class="auth-bg-pattern"></div>
+    <div class="auth-card">
+      <div class="auth-logo">
+        <svg class="auth-logo-icon" width="36" height="36" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="FlipBook Pro">
+          <rect width="36" height="36" rx="8" fill="#2563eb"/>
+          <rect x="8" y="6" width="13" height="18" rx="2" fill="white" opacity="0.9"/>
+          <rect x="15" y="8" width="13" height="18" rx="2" fill="white" opacity="0.6"/>
+          <path d="M11 11h7M11 14h7M11 17h5" stroke="#2563eb" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+        <span class="auth-logo-text">FlipBook Pro</span>
+      </div>
+      <h1 class="auth-title">Create your account</h1>
+      <p class="auth-subtitle">Start converting PDFs into beautiful flipbooks — free, no credit card required.</p>
+      <div id="register-error" class="auth-error" role="alert"></div>
+      <form id="register-form" novalidate>
+        <div class="form-group">
+          <label class="form-label required" for="register-name">Full name</label>
+          <input class="form-input" id="register-name" type="text" placeholder="Jane Smith" autocomplete="name" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label required" for="register-email">Email address</label>
+          <input class="form-input" id="register-email" type="email" placeholder="you@example.com" autocomplete="email" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label required" for="register-password">Password</label>
+          <input class="form-input" id="register-password" type="password" placeholder="Min. 8 characters" autocomplete="new-password" required>
+          <p class="form-hint">At least 8 characters with a number or symbol.</p>
+        </div>
+        <button type="submit" class="btn btn-primary w-full btn-lg" id="register-submit" style="margin-top: 8px;">
+          <span>Create free account</span>
+        </button>
+      </form>
+      <div class="auth-footer">
+        Already have an account? <a href="#login">Sign in</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     APP SHELL — shown when logged in
+═══════════════════════════════════════════════════════════════ -->
+
+<div id="app" class="hidden">
+
+  <!-- Mobile Overlay -->
+  <div id="mobile-overlay" class="mobile-overlay" onclick="APP.closeMobileSidebar()"></div>
+
+  <!-- ── Sidebar ─────────────────────────────────────────── -->
+  <aside class="sidebar" id="sidebar" aria-label="Main navigation">
+
+    <!-- Logo -->
+    <a href="#dashboard" class="sidebar-logo" aria-label="FlipBook Pro — Go to dashboard">
+      <svg class="sidebar-logo-icon" width="32" height="32" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <rect width="36" height="36" rx="8" fill="#2563eb"/>
+        <rect x="8" y="6" width="13" height="18" rx="2" fill="white" opacity="0.9"/>
+        <rect x="15" y="8" width="13" height="18" rx="2" fill="white" opacity="0.6"/>
+        <path d="M11 11h7M11 14h7M11 17h5" stroke="#2563eb" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+      <span class="sidebar-logo-text">FlipBook Pro</span>
+    </a>
+
+    <!-- Main nav -->
+    <nav class="sidebar-section" aria-label="Navigation">
+      <div class="sidebar-section-label">Main</div>
+
+      <button class="sidebar-nav-item" data-route="dashboard" onclick="APP.navigate('dashboard')" aria-current="false">
+        <i data-lucide="layout-grid" class="nav-icon"></i>
+        <span class="nav-label">My Flipbooks</span>
+      </button>
+
+      <button class="sidebar-nav-item" data-route="create" onclick="APP.navigate('create')" aria-current="false">
+        <i data-lucide="upload-cloud" class="nav-icon"></i>
+        <span class="nav-label">Create New</span>
+      </button>
+
+      <div class="sidebar-section-label" style="margin-top: 8px;">Analytics</div>
+
+      <button class="sidebar-nav-item" data-route="analytics-overview" onclick="APP.showAnalyticsOverview()" aria-current="false">
+        <i data-lucide="bar-chart-2" class="nav-icon"></i>
+        <span class="nav-label">Analytics</span>
+      </button>
+
+      <div class="sidebar-section-label" style="margin-top: 8px;">Account</div>
+
+      <button class="sidebar-nav-item" data-route="settings" onclick="APP.navigate('settings')" aria-current="false">
+        <i data-lucide="settings" class="nav-icon"></i>
+        <span class="nav-label">Settings</span>
+      </button>
+    </nav>
+
+    <!-- Collapse button -->
+    <button class="sidebar-collapse-btn" id="sidebar-collapse-btn" onclick="APP.toggleSidebar()" aria-label="Toggle sidebar">
+      <i data-lucide="chevrons-left" id="sidebar-collapse-icon" style="width:18px;height:18px;"></i>
+    </button>
+
+    <!-- User footer -->
+    <div class="sidebar-user" onclick="APP.navigate('settings')" role="button" tabindex="0" aria-label="Account settings">
+      <div class="sidebar-user-avatar" id="sidebar-avatar">JD</div>
+      <div class="sidebar-user-info">
+        <div class="sidebar-user-name" id="sidebar-user-name">Jane Smith</div>
+        <div class="sidebar-user-plan" id="sidebar-user-plan">Free Plan</div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ── Main Content ─────────────────────────────────────── -->
+  <main class="main-content">
+
+    <!-- ── DASHBOARD VIEW ──────────────────────────────────── -->
+    <div id="view-dashboard" class="hidden">
+      <!-- Top Bar -->
+      <header class="topbar">
+        <button class="topbar-hamburger" id="hamburger-btn" onclick="APP.openMobileSidebar()" aria-label="Open navigation">
+          <i data-lucide="menu" style="width:20px;height:20px;"></i>
+        </button>
+        <span class="topbar-title">My Flipbooks</span>
+        <div class="topbar-breadcrumbs" aria-label="Breadcrumb">
+          <a href="#dashboard">Dashboard</a>
+          <span class="breadcrumb-sep">/</span>
+          <span class="breadcrumb-current">All Flipbooks</span>
+        </div>
+        <div class="topbar-search" role="search">
+          <i data-lucide="search" class="topbar-search-icon" aria-hidden="true"></i>
+          <input type="search" id="search-input" placeholder="Search flipbooks…" aria-label="Search flipbooks" oninput="APP.handleSearch(this.value)">
+        </div>
+        <div class="topbar-actions">
+          <!-- Notification bell -->
+          <button class="topbar-notification" aria-label="Notifications">
+            <i data-lucide="bell" style="width:18px;height:18px;"></i>
+            <span class="topbar-notification-dot"></span>
+          </button>
+          <div class="dropdown" id="user-dropdown">
+            <button class="topbar-user-avatar" onclick="APP.toggleUserMenu()" aria-label="User menu" aria-haspopup="true" id="topbar-avatar">
+              JS
+            </button>
+            <div class="dropdown-menu" id="user-menu" role="menu">
+              <button class="dropdown-item" onclick="APP.navigate('settings'); APP.closeUserMenu();" role="menuitem">
+                <i data-lucide="settings"></i> Settings
+              </button>
+              <button class="dropdown-item" onclick="APP.navigate('settings'); APP.closeUserMenu();" role="menuitem">
+                <i data-lucide="credit-card"></i> Billing
+              </button>
+              <div class="dropdown-separator"></div>
+              <button class="dropdown-item danger" onclick="APP.logout()" role="menuitem">
+                <i data-lucide="log-out"></i> Sign out
+              </button>
+            </div>
+          </div>
+          <button class="btn btn-primary" onclick="APP.navigate('create')">
+            <i data-lucide="plus"></i>
+            <span>New Flipbook</span>
+          </button>
+        </div>
+      </header>
+
+      <!-- Content -->
+      <div class="page-content" id="dashboard-content">
+        <!-- Filter bar -->
+        <div class="dashboard-toolbar">
+          <div class="flex gap-2" id="filter-tabs" role="tablist" aria-label="Filter flipbooks">
+            <button class="btn btn-secondary btn-sm active-filter" data-filter="all" onclick="APP.setFilter('all', this)" role="tab" aria-selected="true">All</button>
+            <button class="btn btn-ghost btn-sm" data-filter="published" onclick="APP.setFilter('published', this)" role="tab" aria-selected="false">Published</button>
+            <button class="btn btn-ghost btn-sm" data-filter="draft" onclick="APP.setFilter('draft', this)" role="tab" aria-selected="false">Draft</button>
+            <button class="btn btn-ghost btn-sm" data-filter="private" onclick="APP.setFilter('private', this)" role="tab" aria-selected="false">Private</button>
+          </div>
+          <div class="dashboard-toolbar-right">
+            <span class="flipbook-count-label" id="flipbook-count">0 flipbooks</span>
+            <!-- Sort dropdown -->
+            <select class="form-input form-select sort-select" id="sort-select" onchange="APP.setSortOrder(this.value)" aria-label="Sort flipbooks">
+              <option value="recent">Recent</option>
+              <option value="name">Name A–Z</option>
+              <option value="name-desc">Name Z–A</option>
+              <option value="views">Most Viewed</option>
+            </select>
+            <!-- View mode toggle -->
+            <div class="view-toggle" role="group" aria-label="View mode">
+              <button class="view-toggle-btn active" data-view="grid" onclick="APP.setViewMode('grid', this)" aria-label="Grid view" title="Grid view">
+                <i data-lucide="layout-grid" style="width:16px;height:16px;"></i>
+              </button>
+              <button class="view-toggle-btn" data-view="list" onclick="APP.setViewMode('list', this)" aria-label="List view" title="List view">
+                <i data-lucide="list" style="width:16px;height:16px;"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Skeleton loading -->
+        <div class="flipbook-grid" id="flipbook-skeleton" aria-hidden="true">
+          <div class="skeleton-card"><div class="skeleton-thumb"></div><div class="skeleton-body"><div class="skeleton-line w-75"></div><div class="skeleton-line w-50"></div></div></div>
+          <div class="skeleton-card"><div class="skeleton-thumb"></div><div class="skeleton-body"><div class="skeleton-line w-75"></div><div class="skeleton-line w-50"></div></div></div>
+          <div class="skeleton-card"><div class="skeleton-thumb"></div><div class="skeleton-body"><div class="skeleton-line w-75"></div><div class="skeleton-line w-50"></div></div></div>
+          <div class="skeleton-card"><div class="skeleton-thumb"></div><div class="skeleton-body"><div class="skeleton-line w-75"></div><div class="skeleton-line w-50"></div></div></div>
+        </div>
+
+        <!-- Grid -->
+        <div class="flipbook-grid" id="flipbook-grid" role="list" aria-label="Flipbooks"></div>
+
+        <!-- Empty state (hidden by default) -->
+        <div class="empty-state hidden" id="empty-state">
+          <div class="empty-state-illustration">
+            <svg width="180" height="140" viewBox="0 0 180 140" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+              <rect x="30" y="20" width="60" height="80" rx="4" fill="#dbeafe" stroke="#93c5fd" stroke-width="2"/>
+              <rect x="40" y="30" width="40" height="4" rx="2" fill="#93c5fd"/>
+              <rect x="40" y="40" width="30" height="4" rx="2" fill="#bfdbfe"/>
+              <rect x="40" y="50" width="35" height="4" rx="2" fill="#bfdbfe"/>
+              <rect x="90" y="25" width="60" height="80" rx="4" fill="#eff6ff" stroke="#bfdbfe" stroke-width="2" transform="rotate(5 120 65)"/>
+              <rect x="100" y="35" width="40" height="4" rx="2" fill="#bfdbfe" transform="rotate(5 120 37)"/>
+              <rect x="100" y="45" width="30" height="4" rx="2" fill="#dbeafe" transform="rotate(5 115 47)"/>
+              <circle cx="140" cy="110" r="18" fill="#eff6ff" stroke="#2563eb" stroke-width="2" stroke-dasharray="4 3"/>
+              <path d="M136 110h8M140 106v8" stroke="#2563eb" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+          </div>
+          <h3>No flipbooks yet</h3>
+          <p>Upload a PDF and transform it into an interactive flipbook in minutes. It only takes a few seconds.</p>
+          <button class="btn btn-primary btn-lg" onclick="APP.navigate('create')">
+            <i data-lucide="upload-cloud"></i>
+            Create your first flipbook
+          </button>
+          <span class="empty-state-hint">Supports PDF up to 100 MB</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── CREATE / UPLOAD VIEW ────────────────────────────── -->
+    <div id="view-create" class="hidden">
+      <header class="topbar">
+        <button class="topbar-hamburger" onclick="APP.openMobileSidebar()" aria-label="Open navigation">
+          <i data-lucide="menu" style="width:20px;height:20px;"></i>
+        </button>
+        <button class="btn btn-ghost btn-icon" onclick="APP.navigate('dashboard')" aria-label="Back to dashboard">
+          <i data-lucide="arrow-left" style="width:20px;height:20px;"></i>
+        </button>
+        <span class="topbar-title">Create New Flipbook</span>
+        <div class="topbar-breadcrumbs" aria-label="Breadcrumb">
+          <a href="#dashboard">Dashboard</a>
+          <span class="breadcrumb-sep">/</span>
+          <span class="breadcrumb-current">Upload</span>
+        </div>
+      </header>
+
+      <div class="page-content">
+        <div class="page-header">
+          <div class="page-header-left">
+            <h1>Upload a PDF</h1>
+            <p>We'll convert each page into a high-quality image for smooth flipping.</p>
+          </div>
+        </div>
+
+        <!-- Upload zone -->
+        <div class="upload-zone" id="upload-zone" role="button" tabindex="0" aria-label="Drop PDF here or click to select"
+          onclick="document.getElementById('file-input').click()"
+          ondragover="APP.handleDragOver(event)"
+          ondragleave="APP.handleDragLeave(event)"
+          ondrop="APP.handleDrop(event)"
+          onkeydown="if(event.key==='Enter'||event.key===' ')document.getElementById('file-input').click()">
+          <div class="upload-zone-icon">
+            <i data-lucide="file-up"></i>
+          </div>
+          <h3 class="upload-zone-title">Drop your PDF here</h3>
+          <p class="upload-zone-subtitle">or click to browse your files</p>
+          <div class="upload-zone-constraints">
+            <span class="upload-constraint"><i data-lucide="file-text" style="width:14px;height:14px;"></i> PDF only</span>
+            <span class="upload-constraint"><i data-lucide="hard-drive" style="width:14px;height:14px;"></i> Max 100 MB</span>
+            <span class="upload-constraint"><i data-lucide="layers" style="width:14px;height:14px;"></i> Up to 500 pages</span>
+          </div>
+          <button class="btn btn-secondary" type="button" onclick="event.stopPropagation(); document.getElementById('file-input').click()">
+            <i data-lucide="folder-open"></i>
+            Choose file
+          </button>
+          <input type="file" id="file-input" accept=".pdf,application/pdf" style="display:none" onchange="APP.handleFileSelect(event)">
+        </div>
+
+        <!-- File preview (before upload) -->
+        <div class="upload-file-preview hidden" id="upload-file-preview">
+          <div class="card">
+            <div class="upload-file-info">
+              <div class="upload-file-icon">
+                <i data-lucide="file-text" style="width:24px;height:24px;"></i>
+              </div>
+              <div class="upload-file-details">
+                <div class="upload-file-name" id="preview-file-name">document.pdf</div>
+                <div class="upload-file-meta" id="preview-file-meta">0 MB</div>
+              </div>
+              <button class="btn btn-ghost btn-icon btn-sm" onclick="APP.cancelFilePreview()" aria-label="Remove file">
+                <i data-lucide="x" style="width:16px;height:16px;"></i>
+              </button>
+            </div>
+            <div class="upload-file-actions">
+              <button class="btn btn-primary" onclick="APP.startUpload()">
+                <i data-lucide="upload-cloud"></i> Upload & Process
+              </button>
+              <button class="btn btn-ghost" onclick="APP.cancelFilePreview()">
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Progress -->
+        <div class="upload-progress" id="upload-progress">
+          <div class="card" style="padding: 24px;">
+            <div class="upload-progress-header">
+              <div class="upload-progress-icon">
+                <i data-lucide="file-text" style="width:20px;height:20px;"></i>
+              </div>
+              <div>
+                <div class="upload-progress-name" id="upload-file-name">document.pdf</div>
+                <div class="upload-progress-size" id="upload-file-size">0 MB</div>
+              </div>
+              <div class="upload-progress-pct" id="upload-pct">0%</div>
+            </div>
+            <div class="progress-bar-wrap">
+              <div class="progress-bar-fill" id="progress-bar" style="width: 0%"></div>
+            </div>
+            <div class="progress-status" id="progress-status">Preparing upload…</div>
+          </div>
+        </div>
+
+        <!-- Success state -->
+        <div class="upload-success hidden" id="upload-success">
+          <div class="card upload-success-card">
+            <div class="upload-success-icon">
+              <i data-lucide="check-circle" style="width:48px;height:48px;"></i>
+            </div>
+            <h3>Upload complete!</h3>
+            <p id="upload-success-info">Your flipbook is ready to customize.</p>
+            <div class="upload-success-actions">
+              <button class="btn btn-primary" id="upload-success-edit" onclick="APP.goToUploadedFlipbook()">
+                <i data-lucide="settings"></i> Edit Settings
+              </button>
+              <button class="btn btn-secondary" id="upload-success-view" onclick="APP.viewUploadedFlipbook()">
+                <i data-lucide="eye"></i> View Flipbook
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── EDITOR VIEW ─────────────────────────────────────── -->
+    <div id="view-editor" class="hidden" style="display:flex;flex-direction:column;height:100dvh;overflow:hidden;">
+
+      <!-- Editor Topbar -->
+      <header class="editor-topbar">
+        <button class="btn btn-ghost btn-icon" onclick="APP.navigate('dashboard')" aria-label="Back to dashboard">
+          <i data-lucide="arrow-left" style="width:20px;height:20px;"></i>
+        </button>
+        <input class="editor-title-input" id="editor-title-input" type="text" value="Untitled Flipbook" maxlength="120" aria-label="Flipbook title" onblur="APP.saveTitle()" onkeydown="if(event.key==='Enter')this.blur()">
+        <div class="flex items-center gap-2" style="margin-left:auto;">
+          <span id="editor-save-status" style="font-size:12px;color:var(--color-text-muted);"></span>
+          <button class="btn btn-secondary btn-sm" onclick="APP.previewFlipbook()" id="editor-preview-btn">
+            <i data-lucide="eye"></i> Preview
+          </button>
+          <button class="btn btn-primary" onclick="APP.publishFlipbook()" id="editor-publish-btn">
+            <i data-lucide="globe"></i>
+            <span id="editor-publish-label">Publish</span>
+          </button>
+        </div>
+      </header>
+
+      <!-- Editor Body -->
+      <div class="editor-layout">
+
+        <!-- Preview Panel -->
+        <div class="editor-preview">
+          <div class="editor-preview-inner">
+            <div id="preview-container">
+              <i data-lucide="book-open" style="width:48px;height:48px;color:#475569;margin-bottom:12px;"></i>
+              <p style="color:#64748b;font-size:14px;">Live preview will appear here</p>
+              <p style="color:#94a3b8;font-size:12px;margin-top:4px;">Powered by the FlipBook viewer engine</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Settings Panel -->
+        <aside class="editor-settings" aria-label="Flipbook settings">
+          <div style="padding:16px 20px;border-bottom:1px solid var(--color-border);">
+            <h2 style="font-size:13px;font-weight:600;color:var(--color-text-muted);text-transform:uppercase;letter-spacing:0.06em;">Settings</h2>
+          </div>
+
+          <!-- ACCORDION: Appearance -->
+          <div class="accordion-item open" data-accordion="appearance">
+            <button class="accordion-header" onclick="APP.toggleAccordion(this)" aria-expanded="true">
+              <span>
+                <i data-lucide="palette" style="width:15px;height:15px;display:inline-block;vertical-align:middle;margin-right:6px;"></i>
+                Appearance
+              </span>
+              <i data-lucide="chevron-down" class="accordion-icon"></i>
+            </button>
+            <div class="accordion-body">
+              <div class="form-group">
+                <label class="form-label">Background Color</label>
+                <div class="color-input-group">
+                  <div class="color-swatch">
+                    <input type="color" id="setting-bg-color" value="#ffffff" onchange="APP.updateSetting('backgroundColor', this.value)">
+                  </div>
+                  <input class="form-input" type="text" id="setting-bg-color-text" value="#ffffff" style="font-family:monospace;font-size:13px;" onchange="APP.updateSettingFromText('backgroundColor', this)" maxlength="7" placeholder="#ffffff">
+                </div>
+                <div class="color-presets" aria-label="Preset colors">
+                  <button class="color-preset" style="background:#ffffff;" onclick="APP.applyBgPreset('#ffffff')" title="White" aria-label="White"></button>
+                  <button class="color-preset" style="background:#f8fafc;" onclick="APP.applyBgPreset('#f8fafc')" title="Snow" aria-label="Snow"></button>
+                  <button class="color-preset" style="background:#f1f5f9;" onclick="APP.applyBgPreset('#f1f5f9')" title="Slate 100" aria-label="Slate 100"></button>
+                  <button class="color-preset" style="background:#0f172a;" onclick="APP.applyBgPreset('#0f172a')" title="Dark" aria-label="Dark"></button>
+                  <button class="color-preset" style="background:#1e293b;" onclick="APP.applyBgPreset('#1e293b')" title="Charcoal" aria-label="Charcoal"></button>
+                  <button class="color-preset" style="background:#fffbeb;" onclick="APP.applyBgPreset('#fffbeb')" title="Warm" aria-label="Warm"></button>
+                  <button class="color-preset" style="background:#f0fdf4;" onclick="APP.applyBgPreset('#f0fdf4')" title="Mint" aria-label="Mint"></button>
+                  <button class="color-preset" style="background:#eff6ff;" onclick="APP.applyBgPreset('#eff6ff')" title="Sky" aria-label="Sky"></button>
+                </div>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Title Font</label>
+                <select class="form-input form-select" id="setting-title-font" onchange="APP.updateSetting('titleFont', this.value)">
+                  <option value="Inter">Inter (Default)</option>
+                  <option value="Georgia">Georgia</option>
+                  <option value="Playfair Display">Playfair Display</option>
+                  <option value="Merriweather">Merriweather</option>
+                  <option value="Roboto Slab">Roboto Slab</option>
+                  <option value="Lato">Lato</option>
+                  <option value="Poppins">Poppins</option>
+                  <option value="Montserrat">Montserrat</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Shadow Opacity</label>
+                <input type="range" class="form-range" id="setting-shadow" min="0" max="1" step="0.05" value="0.5" oninput="APP.updateSetting('maxShadowOpacity', parseFloat(this.value)); document.getElementById('shadow-val').textContent = Math.round(this.value*100)+'%'">
+                <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--color-text-muted);margin-top:4px;"><span>0%</span><span id="shadow-val">50%</span><span>100%</span></div>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Flip Speed (ms)</label>
+                <input type="range" class="form-range" id="setting-flip-speed" min="200" max="2000" step="100" value="800" oninput="APP.updateSetting('flippingTime', parseInt(this.value)); document.getElementById('flip-speed-val').textContent = this.value+'ms'">
+                <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--color-text-muted);margin-top:4px;"><span>200ms</span><span id="flip-speed-val">800ms</span><span>2s</span></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ACCORDION: Navigation -->
+          <div class="accordion-item" data-accordion="navigation">
+            <button class="accordion-header" onclick="APP.toggleAccordion(this)" aria-expanded="false">
+              <span>
+                <i data-lucide="navigation" style="width:15px;height:15px;display:inline-block;vertical-align:middle;margin-right:6px;"></i>
+                Navigation
+              </span>
+              <i data-lucide="chevron-down" class="accordion-icon"></i>
+            </button>
+            <div class="accordion-body">
+              <div class="toggle-group">
+                <div>
+                  <div class="toggle-label">Page Numbers</div>
+                  <div class="toggle-hint">Show current page / total</div>
+                </div>
+                <label class="toggle">
+                  <input type="checkbox" id="setting-page-numbers" checked onchange="APP.updateSetting('showPageNumbers', this.checked)">
+                  <span class="toggle-slider"></span>
+                </label>
+              </div>
+              <div class="toggle-group">
+                <div>
+                  <div class="toggle-label">Thumbnail Strip</div>
+                  <div class="toggle-hint">Bottom page thumbnails</div>
+                </div>
+                <label class="toggle">
+                  <input type="checkbox" id="setting-thumbnails" checked onchange="APP.updateSetting('showThumbnails', this.checked)">
+                  <span class="toggle-slider"></span>
+                </label>
+              </div>
+              <div class="toggle-group">
+                <div>
+                  <div class="toggle-label">Navigation Arrows</div>
+                  <div class="toggle-hint">Left/right arrow buttons</div>
+                </div>
+                <label class="toggle">
+                  <input type="checkbox" id="setting-arrows" checked onchange="APP.updateSetting('showArrows', this.checked)">
+                  <span class="toggle-slider"></span>
+                </label>
+              </div>
+              <div class="toggle-group">
+                <div>
+                  <div class="toggle-label">Fullscreen Button</div>
+                </div>
+                <label class="toggle">
+                  <input type="checkbox" id="setting-fullscreen" checked onchange="APP.updateSetting('showFullscreen', this.checked)">
+                  <span class="toggle-slider"></span>
+                </label>
+              </div>
+              <div class="toggle-group">
+                <div>
+                  <div class="toggle-label">Zoom Controls</div>
+                </div>
+                <label class="toggle">
+                  <input type="checkbox" id="setting-zoom" checked onchange="APP.updateSetting('showZoom', this.checked)">
+                  <span class="toggle-slider"></span>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <!-- ACCORDION: Behavior -->
+          <div class="accordion-item" data-accordion="behavior">
+            <button class="accordion-header" onclick="APP.toggleAccordion(this)" aria-expanded="false">
+              <span>
+                <i data-lucide="zap" style="width:15px;height:15px;display:inline-block;vertical-align:middle;margin-right:6px;"></i>
+                Behavior
+              </span>
+              <i data-lucide="chevron-down" class="accordion-icon"></i>
+            </button>
+            <div class="accordion-body">
+              <div class="toggle-group">
+                <div>
+                  <div class="toggle-label">Auto-play Slideshow</div>
+                  <div class="toggle-hint">Flip pages automatically</div>
+                </div>
+                <label class="toggle">
+                  <input type="checkbox" id="setting-autoplay" onchange="APP.updateSetting('autoPlay', this.checked); document.getElementById('autoplay-interval-group').style.display=this.checked?'block':'none'">
+                  <span class="toggle-slider"></span>
+                </label>
+              </div>
+              <div id="autoplay-interval-group" style="display:none;" class="form-group">
+                <label class="form-label">Interval (seconds)</label>
+                <input type="range" class="form-range" id="setting-autoplay-interval" min="2" max="30" step="1" value="5" oninput="APP.updateSetting('autoPlayInterval', parseInt(this.value)*1000); document.getElementById('autoplay-val').textContent = this.value+'s'">
+                <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--color-text-muted);margin-top:4px;"><span>2s</span><span id="autoplay-val">5s</span><span>30s</span></div>
+              </div>
+              <div class="toggle-group">
+                <div>
+                  <div class="toggle-label">Flip Sound</div>
+                  <div class="toggle-hint">Page-turn audio effect</div>
+                </div>
+                <label class="toggle">
+                  <input type="checkbox" id="setting-flip-sound" checked onchange="APP.updateSetting('flipSound', this.checked)">
+                  <span class="toggle-slider"></span>
+                </label>
+              </div>
+              <div class="toggle-group">
+                <div>
+                  <div class="toggle-label">RTL Mode</div>
+                  <div class="toggle-hint">Right-to-left reading</div>
+                </div>
+                <label class="toggle">
+                  <input type="checkbox" id="setting-rtl" onchange="APP.updateSetting('rtl', this.checked)">
+                  <span class="toggle-slider"></span>
+                </label>
+              </div>
+              <div class="toggle-group">
+                <div>
+                  <div class="toggle-label">Show Cover</div>
+                  <div class="toggle-hint">Single page as cover</div>
+                </div>
+                <label class="toggle">
+                  <input type="checkbox" id="setting-cover" checked onchange="APP.updateSetting('showCover', this.checked)">
+                  <span class="toggle-slider"></span>
+                </label>
+              </div>
+              <div class="toggle-group">
+                <div>
+                  <div class="toggle-label">Page Corners</div>
+                  <div class="toggle-hint">Show corner flip hints</div>
+                </div>
+                <label class="toggle">
+                  <input type="checkbox" id="setting-corners" checked onchange="APP.updateSetting('showPageCorners', this.checked)">
+                  <span class="toggle-slider"></span>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <!-- ACCORDION: Branding -->
+          <div class="accordion-item" data-accordion="branding">
+            <button class="accordion-header" onclick="APP.toggleAccordion(this)" aria-expanded="false">
+              <span>
+                <i data-lucide="image" style="width:15px;height:15px;display:inline-block;vertical-align:middle;margin-right:6px;"></i>
+                Branding
+              </span>
+              <i data-lucide="chevron-down" class="accordion-icon"></i>
+            </button>
+            <div class="accordion-body">
+              <div class="form-group">
+                <label class="form-label">Logo Upload</label>
+                <button class="btn btn-secondary w-full" onclick="document.getElementById('logo-upload').click()">
+                  <i data-lucide="upload"></i> Upload Logo
+                </button>
+                <input type="file" id="logo-upload" accept="image/*" style="display:none" onchange="APP.handleLogoUpload(event)">
+                <p class="form-hint">PNG, SVG or JPG. Recommended: 200×50px</p>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Primary Color</label>
+                <div class="color-input-group">
+                  <div class="color-swatch">
+                    <input type="color" id="setting-primary-color" value="#2563eb" onchange="APP.updateBrandingSetting('primaryColor', this.value)">
+                  </div>
+                  <input class="form-input" type="text" id="setting-primary-color-text" value="#2563eb" style="font-family:monospace;font-size:13px;" onchange="APP.updateBrandingSettingFromText('primaryColor', this)" maxlength="7" placeholder="#2563eb">
+                </div>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Branding Text</label>
+                <input class="form-input" type="text" id="setting-branding-text" placeholder="Your company name" oninput="APP.updateBrandingSetting('brandingText', this.value)">
+              </div>
+              <div class="toggle-group">
+                <div>
+                  <div class="toggle-label">Show Branding</div>
+                  <div class="toggle-hint">Display logo on viewer</div>
+                </div>
+                <label class="toggle">
+                  <input type="checkbox" id="setting-show-branding" checked onchange="APP.updateBrandingSetting('showBranding', this.checked)">
+                  <span class="toggle-slider"></span>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <!-- ACCORDION: Sharing -->
+          <div class="accordion-item" data-accordion="sharing">
+            <button class="accordion-header" onclick="APP.toggleAccordion(this)" aria-expanded="false">
+              <span>
+                <i data-lucide="share-2" style="width:15px;height:15px;display:inline-block;vertical-align:middle;margin-right:6px;"></i>
+                Sharing
+              </span>
+              <i data-lucide="chevron-down" class="accordion-icon"></i>
+            </button>
+            <div class="accordion-body">
+              <div class="form-group">
+                <label class="form-label">Visibility</label>
+                <div class="visibility-options">
+                  <label class="visibility-option">
+                    <input type="radio" name="visibility" value="public" id="vis-public" onchange="APP.updateVisibility('public')">
+                    <div class="visibility-option-icon"><i data-lucide="globe" style="width:18px;height:18px;"></i></div>
+                    <div>
+                      <div class="visibility-option-label">Public</div>
+                      <div class="visibility-option-desc">Anyone with the link</div>
+                    </div>
+                  </label>
+                  <label class="visibility-option">
+                    <input type="radio" name="visibility" value="private" id="vis-private" checked onchange="APP.updateVisibility('private')">
+                    <div class="visibility-option-icon"><i data-lucide="lock" style="width:18px;height:18px;"></i></div>
+                    <div>
+                      <div class="visibility-option-label">Private</div>
+                      <div class="visibility-option-desc">Only you</div>
+                    </div>
+                  </label>
+                  <label class="visibility-option">
+                    <input type="radio" name="visibility" value="password" id="vis-password" onchange="APP.updateVisibility('password')">
+                    <div class="visibility-option-icon"><i data-lucide="key" style="width:18px;height:18px;"></i></div>
+                    <div>
+                      <div class="visibility-option-label">Password Protected</div>
+                      <div class="visibility-option-desc">Requires a password</div>
+                    </div>
+                  </label>
+                </div>
+              </div>
+              <div id="password-protect-group" style="display:none;" class="form-group">
+                <label class="form-label">Access Password</label>
+                <input class="form-input" type="password" id="setting-access-password" placeholder="Set a password" oninput="APP.updateSetting('password', this.value)">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Share URL</label>
+                <div style="display:flex;gap:8px;">
+                  <input class="form-input" type="text" id="share-url" readonly style="font-size:12px;font-family:monospace;" value="https://flipbookpro.app/view/my-flipbook">
+                  <button class="btn btn-secondary btn-icon" onclick="APP.copyShareUrl()" aria-label="Copy share URL" title="Copy URL">
+                    <i data-lucide="copy"></i>
+                  </button>
+                </div>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Embed Code</label>
+                <div class="code-block" id="embed-code" style="font-size:11px;padding:12px;border-radius:8px;position:relative;">&lt;iframe src="https://flipbookpro.app/view/my-flipbook"
+  width="800" height="500"
+  frameborder="0"
+  allowfullscreen&gt;
+&lt;/iframe&gt;
+                  <button class="btn btn-ghost btn-sm copy-btn" onclick="APP.copyEmbedCode()" aria-label="Copy embed code" title="Copy code">
+                    <i data-lucide="copy" style="width:12px;height:12px;"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </aside><!-- /editor-settings -->
+      </div><!-- /editor-layout -->
+    </div><!-- /view-editor -->
+
+    <!-- ── ANALYTICS VIEW ──────────────────────────────────── -->
+    <div id="view-analytics" class="hidden">
+      <header class="topbar">
+        <button class="topbar-hamburger" onclick="APP.openMobileSidebar()" aria-label="Open navigation">
+          <i data-lucide="menu" style="width:20px;height:20px;"></i>
+        </button>
+        <button class="btn btn-ghost btn-icon" onclick="APP.navigate('dashboard')" aria-label="Back to dashboard">
+          <i data-lucide="arrow-left" style="width:20px;height:20px;"></i>
+        </button>
+        <span class="topbar-title" id="analytics-title">Analytics</span>
+        <div class="topbar-actions">
+          <select class="form-input form-select" id="analytics-range" style="width:160px;padding:8px 32px 8px 12px;font-size:13px;" onchange="APP.updateAnalyticsRange(this.value)">
+            <option value="7">Last 7 days</option>
+            <option value="30" selected>Last 30 days</option>
+            <option value="90">Last 90 days</option>
+          </select>
+        </div>
+      </header>
+
+      <div class="page-content">
+        <!-- Breadcrumbs -->
+        <div class="topbar-breadcrumbs" aria-label="Breadcrumb" style="margin-bottom:20px;">
+          <a href="#dashboard">Dashboard</a>
+          <span class="breadcrumb-sep">/</span>
+          <span class="breadcrumb-current" id="analytics-breadcrumb">Analytics</span>
+        </div>
+
+        <!-- KPI Cards -->
+        <div class="kpi-grid" id="kpi-grid">
+          <div class="kpi-card">
+            <div class="kpi-card-top">
+              <div class="kpi-label">Total Views</div>
+              <div class="kpi-icon-wrap kpi-icon-blue"><i data-lucide="eye" style="width:16px;height:16px;"></i></div>
+            </div>
+            <div class="kpi-value" id="kpi-views">—</div>
+            <div class="kpi-bottom">
+              <div class="kpi-delta up" id="kpi-views-delta"><i data-lucide="trending-up"></i> —</div>
+              <svg class="kpi-sparkline" id="sparkline-views" width="80" height="28" viewBox="0 0 80 28"></svg>
+            </div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-card-top">
+              <div class="kpi-label">Unique Visitors</div>
+              <div class="kpi-icon-wrap kpi-icon-green"><i data-lucide="users" style="width:16px;height:16px;"></i></div>
+            </div>
+            <div class="kpi-value" id="kpi-visitors">—</div>
+            <div class="kpi-bottom">
+              <div class="kpi-delta up" id="kpi-visitors-delta"><i data-lucide="trending-up"></i> —</div>
+              <svg class="kpi-sparkline" id="sparkline-visitors" width="80" height="28" viewBox="0 0 80 28"></svg>
+            </div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-card-top">
+              <div class="kpi-label">Avg Pages Read</div>
+              <div class="kpi-icon-wrap kpi-icon-purple"><i data-lucide="book-open" style="width:16px;height:16px;"></i></div>
+            </div>
+            <div class="kpi-value" id="kpi-pages">—</div>
+            <div class="kpi-bottom">
+              <div class="kpi-delta up" id="kpi-pages-delta"><i data-lucide="trending-up"></i> —</div>
+              <svg class="kpi-sparkline" id="sparkline-pages" width="80" height="28" viewBox="0 0 80 28"></svg>
+            </div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-card-top">
+              <div class="kpi-label">Avg Time Spent</div>
+              <div class="kpi-icon-wrap kpi-icon-orange"><i data-lucide="clock" style="width:16px;height:16px;"></i></div>
+            </div>
+            <div class="kpi-value" id="kpi-time">—</div>
+            <div class="kpi-bottom">
+              <div class="kpi-delta up" id="kpi-time-delta"><i data-lucide="trending-up"></i> —</div>
+              <svg class="kpi-sparkline" id="sparkline-time" width="80" height="28" viewBox="0 0 80 28"></svg>
+            </div>
+          </div>
+        </div>
+
+        <!-- Charts -->
+        <div class="charts-grid">
+          <div class="chart-container">
+            <div class="chart-title">Views over time</div>
+            <div class="chart-wrap">
+              <canvas id="chart-views"></canvas>
+            </div>
+          </div>
+          <div class="chart-container">
+            <div class="chart-title">Page heatmap</div>
+            <div class="chart-wrap">
+              <canvas id="chart-pages"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <!-- Top Pages -->
+        <div class="card" style="margin-bottom: var(--space-8);">
+          <div class="card-header">
+            <h2>Top Pages</h2>
+          </div>
+          <div class="card-body" style="padding:0;">
+            <div class="data-table-wrap" style="border:none;border-radius:0;box-shadow:none;">
+              <table class="data-table" id="top-pages-table" aria-label="Top pages by engagement">
+                <thead>
+                  <tr>
+                    <th>Page</th>
+                    <th>Views</th>
+                    <th>Avg Time</th>
+                    <th>Engagement</th>
+                  </tr>
+                </thead>
+                <tbody id="top-pages-tbody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Visitors Table -->
+        <div class="card">
+          <div class="card-header">
+            <h2>Recent Visitors</h2>
+            <button class="btn btn-ghost btn-sm">
+              <i data-lucide="download"></i> Export CSV
+            </button>
+          </div>
+          <div class="card-body" style="padding:0;">
+            <div class="data-table-wrap" style="border:none;border-radius:0;box-shadow:none;">
+              <table class="data-table" id="visitors-table" aria-label="Recent visitors">
+                <thead>
+                  <tr>
+                    <th>Time</th>
+                    <th>Pages Viewed</th>
+                    <th>Time Spent</th>
+                    <th>Referrer</th>
+                    <th>Country</th>
+                  </tr>
+                </thead>
+                <tbody id="visitors-tbody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div><!-- /view-analytics -->
+
+    <!-- ── SETTINGS VIEW ───────────────────────────────────── -->
+    <div id="view-settings" class="hidden">
+      <header class="topbar">
+        <button class="topbar-hamburger" onclick="APP.openMobileSidebar()" aria-label="Open navigation">
+          <i data-lucide="menu" style="width:20px;height:20px;"></i>
+        </button>
+        <span class="topbar-title">Settings</span>
+        <div class="topbar-breadcrumbs" aria-label="Breadcrumb">
+          <a href="#dashboard">Dashboard</a>
+          <span class="breadcrumb-sep">/</span>
+          <span class="breadcrumb-current">Settings</span>
+        </div>
+      </header>
+
+      <div class="page-content">
+        <div class="page-header">
+          <div class="page-header-left">
+            <h1>Account Settings</h1>
+            <p>Manage your profile, billing, and branding preferences.</p>
+          </div>
+        </div>
+
+        <div class="settings-layout">
+          <!-- Settings Nav -->
+          <nav class="settings-nav" aria-label="Settings navigation">
+            <button class="settings-nav-item active" data-tab="profile" onclick="APP.switchSettingsTab('profile', this)">
+              <i data-lucide="user"></i> Profile
+            </button>
+            <button class="settings-nav-item" data-tab="security" onclick="APP.switchSettingsTab('security', this)">
+              <i data-lucide="shield"></i> Security
+            </button>
+            <button class="settings-nav-item" data-tab="plan" onclick="APP.switchSettingsTab('plan', this)">
+              <i data-lucide="credit-card"></i> Plan & Billing
+            </button>
+            <button class="settings-nav-item" data-tab="branding" onclick="APP.switchSettingsTab('branding', this)">
+              <i data-lucide="palette"></i> Branding
+            </button>
+            <button class="settings-nav-item" data-tab="api" onclick="APP.switchSettingsTab('api', this)">
+              <i data-lucide="code"></i> API
+            </button>
+          </nav>
+
+          <!-- Settings Content -->
+          <div>
+            <!-- Profile Tab -->
+            <section class="settings-section active" id="settings-profile">
+              <div class="settings-card">
+                <div class="settings-card-header">
+                  <h3>Profile Information</h3>
+                  <p>Update your name, avatar, and email address.</p>
+                </div>
+                <div class="settings-card-body">
+                  <!-- Avatar upload -->
+                  <div class="form-group">
+                    <label class="form-label">Avatar</label>
+                    <div class="avatar-upload-group">
+                      <div class="avatar-upload-preview" id="settings-avatar-preview">
+                        <span id="settings-avatar-initials">JS</span>
+                      </div>
+                      <div class="avatar-upload-actions">
+                        <button class="btn btn-secondary btn-sm" onclick="document.getElementById('avatar-file-input').click()">
+                          <i data-lucide="upload"></i> Upload photo
+                        </button>
+                        <button class="btn btn-ghost btn-sm" onclick="APP.removeAvatar()">
+                          Remove
+                        </button>
+                        <input type="file" id="avatar-file-input" accept="image/*" style="display:none" onchange="APP.handleAvatarUpload(event)">
+                        <p class="form-hint">JPG, PNG or GIF. Max 2 MB.</p>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label" for="settings-name">Full Name</label>
+                    <input class="form-input" id="settings-name" type="text" value="Jane Smith" autocomplete="name">
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label" for="settings-email">Email Address</label>
+                    <input class="form-input" id="settings-email" type="email" value="jane@example.com" autocomplete="email">
+                  </div>
+                  <button class="btn btn-primary" onclick="APP.saveProfile()">
+                    <i data-lucide="save"></i> Save Changes
+                  </button>
+                </div>
+              </div>
+            </section>
+
+            <!-- Security Tab -->
+            <section class="settings-section" id="settings-security">
+              <div class="settings-card">
+                <div class="settings-card-header">
+                  <h3>Change Password</h3>
+                  <p>Use a strong password that you don't use elsewhere.</p>
+                </div>
+                <div class="settings-card-body">
+                  <div class="form-group">
+                    <label class="form-label" for="settings-current-pw">Current Password</label>
+                    <input class="form-input" id="settings-current-pw" type="password" placeholder="••••••••" autocomplete="current-password">
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label" for="settings-new-pw">New Password</label>
+                    <input class="form-input" id="settings-new-pw" type="password" placeholder="Min. 8 characters" autocomplete="new-password">
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label" for="settings-confirm-pw">Confirm New Password</label>
+                    <input class="form-input" id="settings-confirm-pw" type="password" placeholder="Repeat new password" autocomplete="new-password">
+                  </div>
+                  <button class="btn btn-primary" onclick="APP.changePassword()">
+                    <i data-lucide="lock"></i> Update Password
+                  </button>
+                </div>
+              </div>
+
+              <div class="settings-card">
+                <div class="settings-card-header">
+                  <h3>Danger Zone</h3>
+                  <p>These actions are permanent and cannot be undone.</p>
+                </div>
+                <div class="settings-card-body">
+                  <button class="btn btn-danger" onclick="APP.confirmDeleteAccount()">
+                    <i data-lucide="trash-2"></i> Delete Account
+                  </button>
+                </div>
+              </div>
+            </section>
+
+            <!-- Plan Tab -->
+            <section class="settings-section" id="settings-plan">
+              <div class="settings-card">
+                <div class="settings-card-header">
+                  <h3>Current Plan</h3>
+                  <p>You're on the <strong>Free Plan</strong>. Upgrade for more features.</p>
+                </div>
+                <div class="settings-card-body">
+                  <div class="plan-grid">
+                    <!-- Free -->
+                    <div class="plan-card current">
+                      <div class="plan-name">Free</div>
+                      <div class="plan-price">$0<span>/mo</span></div>
+                      <ul class="plan-features">
+                        <li><i data-lucide="check"></i> 3 flipbooks</li>
+                        <li><i data-lucide="check"></i> 50 pages each</li>
+                        <li><i data-lucide="check"></i> Basic analytics</li>
+                        <li><i data-lucide="check"></i> FlipBook Pro branding</li>
+                      </ul>
+                      <button class="btn btn-secondary w-full" style="margin-top:16px;" disabled>Current Plan</button>
+                    </div>
+                    <!-- Pro -->
+                    <div class="plan-card">
+                      <div class="plan-name">Pro</div>
+                      <div class="plan-price">$19<span>/mo</span></div>
+                      <ul class="plan-features">
+                        <li><i data-lucide="check"></i> Unlimited flipbooks</li>
+                        <li><i data-lucide="check"></i> 500 pages each</li>
+                        <li><i data-lucide="check"></i> Full analytics</li>
+                        <li><i data-lucide="check"></i> Custom branding</li>
+                        <li><i data-lucide="check"></i> Password protection</li>
+                      </ul>
+                      <button class="btn btn-primary w-full" style="margin-top:16px;" onclick="APP.showToast('Upgrade flow coming soon!', 'info')">Upgrade to Pro</button>
+                    </div>
+                    <!-- Business -->
+                    <div class="plan-card">
+                      <div class="plan-name">Business</div>
+                      <div class="plan-price">$49<span>/mo</span></div>
+                      <ul class="plan-features">
+                        <li><i data-lucide="check"></i> Everything in Pro</li>
+                        <li><i data-lucide="check"></i> Team members (5)</li>
+                        <li><i data-lucide="check"></i> Custom domain</li>
+                        <li><i data-lucide="check"></i> Priority support</li>
+                        <li><i data-lucide="check"></i> API access</li>
+                      </ul>
+                      <button class="btn btn-primary w-full" style="margin-top:16px;" onclick="APP.showToast('Upgrade flow coming soon!', 'info')">Upgrade to Business</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <!-- API Tab -->
+            <section class="settings-section" id="settings-api">
+              <div class="settings-card">
+                <div class="settings-card-header">
+                  <h3>API Keys</h3>
+                  <p>Manage API keys for programmatic access to your flipbooks.</p>
+                </div>
+                <div class="settings-card-body">
+                  <div class="api-key-list" id="api-key-list">
+                    <div class="api-key-item">
+                      <div class="api-key-info">
+                        <div class="api-key-name">Production Key</div>
+                        <div class="api-key-value">
+                          <code id="api-key-display">fb_sk_••••••••••••••••••••••</code>
+                          <button class="btn btn-ghost btn-icon btn-sm" onclick="APP.toggleApiKeyVisibility()" aria-label="Show/hide API key">
+                            <i data-lucide="eye" style="width:14px;height:14px;"></i>
+                          </button>
+                          <button class="btn btn-ghost btn-icon btn-sm" onclick="APP.copyApiKey()" aria-label="Copy API key">
+                            <i data-lucide="copy" style="width:14px;height:14px;"></i>
+                          </button>
+                        </div>
+                        <div class="api-key-meta">Created Mar 1, 2026 · Last used 2h ago</div>
+                      </div>
+                    </div>
+                  </div>
+                  <div style="margin-top:16px;display:flex;gap:8px;">
+                    <button class="btn btn-secondary" onclick="APP.generateApiKey()">
+                      <i data-lucide="key"></i> Generate New Key
+                    </button>
+                    <button class="btn btn-ghost" onclick="APP.showToast('API documentation coming soon!', 'info')">
+                      <i data-lucide="external-link"></i> API Docs
+                    </button>
+                  </div>
+                  <p class="form-hint" style="margin-top:12px;">API access is available on the Business plan and above.</p>
+                </div>
+              </div>
+            </section>
+
+            <!-- Branding Defaults Tab -->
+            <section class="settings-section" id="settings-branding">
+              <div class="settings-card">
+                <div class="settings-card-header">
+                  <h3>Default Branding</h3>
+                  <p>Applied to all new flipbooks by default.</p>
+                </div>
+                <div class="settings-card-body">
+                  <div class="form-group">
+                    <label class="form-label">Default Logo</label>
+                    <button class="btn btn-secondary" onclick="document.getElementById('default-logo-upload').click()">
+                      <i data-lucide="upload"></i> Upload Logo
+                    </button>
+                    <input type="file" id="default-logo-upload" accept="image/*" style="display:none">
+                    <p class="form-hint">PNG, SVG or JPG. Recommended: 200×50px</p>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Default Primary Color</label>
+                    <div class="color-input-group">
+                      <div class="color-swatch">
+                        <input type="color" id="default-primary-color" value="#2563eb">
+                      </div>
+                      <input class="form-input" type="text" value="#2563eb" style="font-family:monospace;font-size:13px;" maxlength="7" placeholder="#2563eb">
+                    </div>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Default Background Color</label>
+                    <div class="color-input-group">
+                      <div class="color-swatch">
+                        <input type="color" id="default-bg-color" value="#ffffff">
+                      </div>
+                      <input class="form-input" type="text" value="#ffffff" style="font-family:monospace;font-size:13px;" maxlength="7" placeholder="#ffffff">
+                    </div>
+                  </div>
+                  <button class="btn btn-primary" onclick="APP.saveBrandingDefaults()">
+                    <i data-lucide="save"></i> Save Defaults
+                  </button>
+                </div>
+              </div>
+            </section>
+          </div>
+        </div>
+      </div>
+    </div><!-- /view-settings -->
+
+  </main>
+</div><!-- /app -->
+
+<!-- ══════════════════════════════════════════════════════════
+     MODALS
+═══════════════════════════════════════════════════════════════ -->
+
+<!-- Delete Confirmation Modal -->
+<div class="modal-overlay" id="delete-modal" role="dialog" aria-modal="true" aria-labelledby="delete-modal-title">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="delete-modal-title">Delete Flipbook?</h3>
+      <button class="btn btn-ghost btn-icon" onclick="APP.closeModal('delete-modal')" aria-label="Close dialog">
+        <i data-lucide="x"></i>
+      </button>
+    </div>
+    <div class="modal-body">
+      <p style="color:var(--color-text-secondary);font-size:14px;line-height:1.6;">This will permanently delete <strong id="delete-flipbook-name">"Untitled"</strong> and all its pages. This action cannot be undone.</p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="APP.closeModal('delete-modal')">Cancel</button>
+      <button class="btn btn-danger" id="delete-confirm-btn" onclick="APP.confirmDelete()">
+        <i data-lucide="trash-2"></i> Delete
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Share Modal -->
+<div class="modal-overlay" id="share-modal" role="dialog" aria-modal="true" aria-labelledby="share-modal-title">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="share-modal-title">Share Flipbook</h3>
+      <button class="btn btn-ghost btn-icon" onclick="APP.closeModal('share-modal')" aria-label="Close dialog">
+        <i data-lucide="x"></i>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">Share Link</label>
+        <div style="display:flex;gap:8px;">
+          <input class="form-input" type="text" id="modal-share-url" readonly style="font-size:13px;font-family:monospace;">
+          <button class="btn btn-secondary btn-icon" onclick="APP.copyModalShareUrl()" aria-label="Copy link">
+            <i data-lucide="copy"></i>
+          </button>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Embed Code</label>
+        <div class="code-block" id="modal-embed-code" style="font-size:11px;"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="APP.closeModal('share-modal')">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     TOAST CONTAINER
+═══════════════════════════════════════════════════════════════ -->
+<div class="toast-container" id="toast-container" aria-live="polite" aria-atomic="false"></div>
+
+<!-- ══════════════════════════════════════════════════════════
+     SCRIPTS
+═══════════════════════════════════════════════════════════════ -->
+<script src="js/app.js"></script>
+
+<!-- Footer attribution (visible in page source / dev tools) -->
+<div style="display:none;" aria-hidden="true">
+  <a href="https://www.perplexity.ai/computer" target="_blank" rel="noopener noreferrer">Created with Perplexity Computer</a>
+</div>
+
+</body>
+</html>

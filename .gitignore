@@ -1,0 +1,36 @@
+# Dependencies
+node_modules/
+__pycache__/
+*.pyc
+
+# Database
+*.db
+*.db-shm
+*.db-wal
+
+# Uploads (user data)
+uploads/
+
+# Logs
+*.log
+server.log
+
+# Environment
+.env
+.env.*
+
+# QA/Test files
+qa-reports/
+qa-test-*.py
+AGENT*_CHANGES.md
+PM_REVIEW.md
+DESIGN_BRIEF.md
+QA_TEST_PLAN.md
+QA_UNIFIED_REPORT.md
+
+# ESLint config (dev only)
+eslint.config.mjs
+
+# OS files
+.DS_Store
+Thumbs.db
