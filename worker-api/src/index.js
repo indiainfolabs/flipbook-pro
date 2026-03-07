@@ -211,6 +211,7 @@ async function handleListFlipbooks(request, env) {
 
   const flipbooks = results.map(f => ({
     ...f,
+    view_count: f.views || 0,
     settings: JSON.parse(f.settings || '{}')
   }));
 

@@ -238,24 +238,11 @@ const api = {
   delete: (path) => api.request('DELETE', path),
 
   async login(email, password) {
-    // Try real API, fallback to mock
-    try {
-      return await api.post('/api/auth/login', { email, password });
-    } catch {
-      // Mock: accept demo@demo.com / password
-      if (email && password.length >= 6) {
-        return { token: 'mock_jwt_token_' + Date.now(), user: { ...MOCK_USER, email, name: email.split('@')[0] } };
-      }
-      throw new Error('Invalid email or password.');
-    }
+    return await api.post('/api/auth/login', { email, password });
   },
 
   async register(name, email, password) {
-    try {
-      return await api.post('/api/auth/register', { name, email, password });
-    } catch {
-      return { token: 'mock_jwt_token_' + Date.now(), user: { ...MOCK_USER, name, email } };
-    }
+    return await api.post('/api/auth/register', { name, email, password });
   },
 
   async getFlipbooks() {
@@ -263,42 +250,29 @@ const api = {
       const data = await api.get('/api/flipbooks');
       return Array.isArray(data) ? data : (data.flipbooks || []);
     } catch {
-      return MOCK_FLIPBOOKS;
+      return [];
     }
   },
 
   async createFlipbook(data) {
-    try {
-      const result = await api.post('/api/flipbooks', data);
-      return result && result.flipbook ? result.flipbook : result;
-    } catch {
-      const id = 'fb_' + Date.now();
-      return { id, ...data, slug: id, view_count: 0, created_at: new Date().toISOString(), updated_at: new Date().toISOString() };
-    }
+    const result = await api.post('/api/flipbooks', data);
+    return result && result.flipbook ? result.flipbook : result;
   },
 
   async updateFlipbook(id, data) {
-    try {
-      const result = await api.put(`/api/flipbooks/${id}`, data);
-      return result && result.flipbook ? result.flipbook : result;
-    } catch {
-      return { id, ...data };
-    }
+    const result = await api.put(`/api/flipbooks/${id}`, data);
+    return result && result.flipbook ? result.flipbook : result;
   },
 
   async deleteFlipbook(id) {
-    try {
-      await api.delete(`/api/flipbooks/${id}`);
-    } catch {
-      // Mock delete — just continue
-    }
+    await api.delete(`/api/flipbooks/${id}`);
   },
 
   async getAnalytics(id, days = 30) {
     try {
       return await api.get(`/api/flipbooks/${id}/analytics`);
     } catch {
-      return generateMockAnalytics(days);
+      return { labels: [], viewData: [], pageLabels: [], pageData: [], totalViews: 0, uniqueVisitors: 0, avgPages: '0', avgTime: '0:00', visitors: [] };
     }
   },
 };
@@ -401,7 +375,7 @@ async function loadDashboard() {
   try {
     state.flipbooks = await api.getFlipbooks();
   } catch {
-    state.flipbooks = MOCK_FLIPBOOKS;
+    state.flipbooks = [];
   }
 
   // Hide skeleton, show grid
@@ -485,8 +459,9 @@ function renderFlipbookCard(fb, idx) {
   const views = formatNumber(fb.view_count || 0);
   const date = formatDate(fb.updated_at);
 
-  const thumbContent = fb.thumbnail_url
-    ? `<img src="${escapeHtml(fb.thumbnail_url || '')}" alt="${escapeHtml(fb.title)} thumbnail" loading="lazy">`
+  const thumbImgUrl = fb.thumbnail_url || (fb.id && fb.page_count > 0 ? `${API}/api/flipbooks/${fb.id}/pages/1` : null);
+  const thumbContent = thumbImgUrl
+    ? `<img src="${escapeHtml(thumbImgUrl)}" alt="${escapeHtml(fb.title)} thumbnail" loading="lazy" style="width:100%;height:100%;object-fit:cover;" onerror="this.outerHTML='<div class=flipbook-card-thumbnail-placeholder><svg xmlns=http://www.w3.org/2000/svg viewBox=0&nbsp;0&nbsp;24&nbsp;24 fill=none stroke=currentColor stroke-width=1.5 stroke-linecap=round stroke-linejoin=round><path d=M4&nbsp;19.5v-15A2.5&nbsp;2.5&nbsp;0&nbsp;0&nbsp;1&nbsp;6.5&nbsp;2H20v20H6.5a2.5&nbsp;2.5&nbsp;0&nbsp;0&nbsp;1&nbsp;0-5H20/></svg><span style=font-size:11px;color:#93acd6;font-weight:500>${fb.page_count}&nbsp;pages</span></div>'">`
     : `<div class="flipbook-card-thumbnail-placeholder">
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
           <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/>
@@ -780,10 +755,12 @@ async function loadEditor(id) {
   if (!fb) {
     try {
       state.flipbooks = await api.getFlipbooks();
-      fb = state.flipbooks.find(f => f.id === id) || MOCK_FLIPBOOKS[0];
-    } catch {
-      fb = MOCK_FLIPBOOKS[0];
+      fb = state.flipbooks.find(f => f.id === id);
+    } catch { /* ignore */ }
+    if (!fb) {
+      try { fb = await api.request('GET', `/api/flipbooks/${encodeURIComponent(id)}`); } catch { /* ignore */ }
     }
+    if (!fb) { showToast('Flipbook not found', 'error'); navigate('dashboard'); return; }
   }
 
   state.currentFlipbook = { ...fb, settings: { ...fb.settings } };
@@ -796,7 +773,7 @@ async function loadEditor(id) {
   publishLabel.textContent = fb.status === 'published' ? 'Update' : 'Publish';
 
   // Update share URL and embed
-  const viewerUrl = `${window.location.origin}/viewer.html?id=${fb.slug}`;
+  const viewerUrl = `${window.location.origin}/viewer.html?id=${fb.id}`;
   document.getElementById('share-url').value = viewerUrl;
   document.getElementById('embed-code').childNodes[0].textContent =
     `<iframe src="${viewerUrl}"\n  width="800" height="500"\n  frameborder="0"\n  allowfullscreen>\n</iframe>`;
@@ -967,7 +944,7 @@ async function publishFlipbook() {
 
 function previewFlipbook() {
   if (!state.currentFlipbook) return;
-  const url = `viewer.html?id=${state.currentFlipbook.slug}`;
+  const url = `viewer.html?id=${state.currentFlipbook.id}`;
   window.open(url, '_blank', 'noopener');
 }
 
@@ -1011,21 +988,15 @@ function applyBgPreset(color) {
 }
 
 // ── Editor inline preview ────────────────────────────────────
-function createPreviewPageContent(pageNum, totalPages) {
+function createPreviewPageContent(pageNum, totalPages, flipbookId) {
   if (pageNum > totalPages) {
     return '<div style="color:#cbd5e1;font-size:13px;">End</div>';
   }
-  const colors = [
-    ['#1e3a5f', '#4f7ef7'], ['#2d1b4e', '#a855f7'], ['#1a3a2a', '#22c55e'],
-    ['#3a1a1a', '#ef4444'], ['#2e2a1a', '#f59e0b'], ['#1a2a3a', '#06b6d4'],
-  ];
-  const [bg, accent] = colors[(pageNum - 1) % colors.length];
-  const labels = ['Cover', 'Introduction', 'Chapter 1', 'Chapter 2', 'Gallery', 'Back Cover'];
-  const label = labels[Math.min(pageNum - 1, labels.length - 1)] || `Page ${pageNum}`;
-  return `<div style="width:100%;height:100%;background:linear-gradient(160deg,${bg},${bg}dd);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:16px;">
-    <div style="font-size:9px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:${accent};border:1px solid ${accent}44;padding:3px 8px;border-radius:99px;font-family:Inter,system-ui,sans-serif;">Page ${pageNum}</div>
-    <div style="font-size:16px;font-weight:700;color:#fff;text-align:center;font-family:Inter,system-ui,sans-serif;">${escapeHtml(label)}</div>
-  </div>`;
+  if (flipbookId) {
+    const imgUrl = `${API}/api/flipbooks/${flipbookId}/pages/${pageNum}`;
+    return `<img src="${imgUrl}" alt="Page ${pageNum}" style="width:100%;height:100%;object-fit:contain;background:#f8fafc;" onerror="this.outerHTML='<div style=&quot;display:flex;align-items:center;justify-content:center;width:100%;height:100%;color:#94a3b8;font-size:13px;&quot;>Page ${pageNum}</div>'">`;
+  }
+  return `<div style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;color:#94a3b8;font-size:13px;">Page ${pageNum}</div>`;
 }
 
 function renderEditorPreview() {
@@ -1035,12 +1006,17 @@ function renderEditorPreview() {
   const fb = state.currentFlipbook;
   const s = fb.settings || {};
   const bgColor = s.backgroundColor || '#ffffff';
-  const pageCount = fb.page_count || 6;
+  const pageCount = fb.page_count || 0;
+
+  if (pageCount === 0) {
+    container.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#94a3b8;">No pages uploaded yet</div>';
+    return;
+  }
 
   // Calculate dimensions
   const containerW = container.clientWidth || 600;
   const containerH = container.clientHeight || 400;
-  const pageAspect = 794 / 1123;
+  const pageAspect = 720 / 576;
   let pageH = Math.min(containerH - 40, 500);
   let pageW = pageH * pageAspect;
   if (pageW * 2 > containerW - 40) {
@@ -1054,10 +1030,10 @@ function renderEditorPreview() {
   container.innerHTML = `
     <div style="display:flex;justify-content:center;align-items:center;height:calc(100% - 56px);gap:2px;">
       <div class="preview-page" style="width:${pageW}px;height:${pageH}px;background:${bgColor};border-radius:4px 0 0 4px;box-shadow:-2px 2px 12px rgba(0,0,0,0.15);overflow:hidden;display:flex;align-items:center;justify-content:center;">
-        ${createPreviewPageContent(leftPage, pageCount)}
+        ${createPreviewPageContent(leftPage, pageCount, fb.id)}
       </div>
       <div class="preview-page" style="width:${pageW}px;height:${pageH}px;background:${bgColor};border-radius:0 4px 4px 0;box-shadow:2px 2px 12px rgba(0,0,0,0.15);overflow:hidden;display:flex;align-items:center;justify-content:center;">
-        ${createPreviewPageContent(rightPage, pageCount)}
+        ${createPreviewPageContent(rightPage, pageCount, fb.id)}
       </div>
     </div>
     <div style="text-align:center;margin-top:12px;font-size:12px;color:#94a3b8;">
@@ -1065,7 +1041,7 @@ function renderEditorPreview() {
       <button onclick="APP.previewPrevPage()" style="border:none;background:none;cursor:pointer;color:#64748b;font-size:12px;">\u2190 Prev</button>
       <button onclick="APP.previewNextPage()" style="border:none;background:none;cursor:pointer;color:#64748b;font-size:12px;">Next \u2192</button>
     </div>
-    <div style="text-align:center;margin-top:6px;font-size:11px;color:#64748b;">Powered by the FlipBook viewer engine</div>
+    <div style="text-align:center;margin-top:6px;font-size:11px;color:#64748b;">Click \u201cPreview\u201d to see full 3D flip viewer</div>
   `;
 }
 
@@ -1165,11 +1141,10 @@ async function loadAnalytics(id, days = 30) {
   if (!fb) {
     try {
       state.flipbooks = await api.getFlipbooks();
-      fb = state.flipbooks.find(f => f.id === id) || MOCK_FLIPBOOKS[0];
-    } catch {
-      fb = MOCK_FLIPBOOKS[0];
-    }
+      fb = state.flipbooks.find(f => f.id === id);
+    } catch { /* ignore */ }
   }
+  if (!fb) { showToast('Flipbook not found for analytics', 'error'); navigate('dashboard'); return; }
 
   document.getElementById('analytics-title').textContent = `Analytics — ${fb.title}`;
 
@@ -1532,10 +1507,10 @@ async function handleLogin(e) {
   try {
     const res = await api.login(email, password);
     state.token = res.token;
-    state.user = res.user || { ...MOCK_USER, email };
+    state.user = res.user || { email, name: email.split('@')[0] };
     safeStorage.setItem('flipbook_token', state.token);
     safeStorage.setItem('flipbook_user', JSON.stringify(state.user));
-    state.flipbooks = MOCK_FLIPBOOKS;
+    state.flipbooks = [];
     updateSidebarUser();
     navigate('dashboard');
   } catch (err) {
@@ -1573,7 +1548,7 @@ async function handleRegister(e) {
   try {
     const res = await api.register(name, email, password);
     state.token = res.token;
-    state.user = res.user || { ...MOCK_USER, name, email };
+    state.user = res.user || { name, email };
     safeStorage.setItem('flipbook_token', state.token);
     safeStorage.setItem('flipbook_user', JSON.stringify(state.user));
     state.flipbooks = [];
@@ -1685,7 +1660,7 @@ async function confirmDelete() {
 function openShareModal(id) {
   const fb = state.flipbooks.find(f => f.id === id);
   if (!fb) return;
-  const viewerUrl = `${window.location.origin}/viewer.html?id=${fb.slug}`;
+  const viewerUrl = `${window.location.origin}/viewer.html?id=${fb.id}`;
   document.getElementById('modal-share-url').value = viewerUrl;
   document.getElementById('modal-embed-code').textContent =
     `<iframe src="${viewerUrl}"\n  width="800" height="500"\n  frameborder="0"\n  allowfullscreen>\n</iframe>`;
@@ -1914,17 +1889,14 @@ function init() {
   // Hash router
   window.addEventListener('hashchange', handleRouteChange);
 
-  // Restore session from storage, or fall back to demo mode
+  // Restore session from storage
   const savedToken = safeStorage.getItem('flipbook_token');
   const savedUser = safeStorage.getItem('flipbook_user');
   if (savedToken && savedUser) {
     state.token = savedToken;
-    try { state.user = JSON.parse(savedUser); } catch(e) { state.user = MOCK_USER; }
-  } else {
-    state.token = 'demo_token';
-    state.user = MOCK_USER;
+    try { state.user = JSON.parse(savedUser); } catch(e) { state.user = null; }
   }
-  state.flipbooks = MOCK_FLIPBOOKS;
+  state.flipbooks = [];
   updateSidebarUser();
 
   handleRouteChange();
