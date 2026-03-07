@@ -510,7 +510,17 @@ class FlipbookViewer {
     const promises = toLoad.map(p => new Promise(resolve => {
       if (!p.imageUrl) { resolve(); return; }
       const img = new Image();
-      img.onload = img.onerror = () => {
+      img.onload = () => {
+        loaded++;
+        // Capture real image dimensions from the first successfully loaded page
+        if (!this._detectedPageWidth && img.naturalWidth > 0) {
+          this._detectedPageWidth = img.naturalWidth;
+          this._detectedPageHeight = img.naturalHeight;
+        }
+        this.setLoadingProgress(70 + (loaded / toLoad.length) * 25, null);
+        resolve();
+      };
+      img.onerror = () => {
         loaded++;
         this.setLoadingProgress(70 + (loaded / toLoad.length) * 25, null);
         resolve();
@@ -583,15 +593,47 @@ class FlipbookViewer {
   /* ── Background Options (Improvement 2) ── */
   _initBackground() {
     const slug = this.slug || 'default';
-    const saved = localStorage.getItem(`fpv_bg_${slug}`) || 'blurred';
-    this._currentBg = saved;
+    const s = this.settings || {};
 
-    // Always set the blurred background image from first page
+    // Always preload the blurred background from first page (needed for 'blurred' mode)
     if (this.pages[0] && this.pages[0].imageUrl) {
       this._setBlurredBackground(this.pages[0].imageUrl);
     }
 
-    this._applyBackground(saved);
+    // Determine effective background:
+    // 1. If viewer user has a localStorage override, use it
+    // 2. Otherwise use the owner's settings from the API
+    const userOverride = localStorage.getItem(`fpv_bg_${slug}`);
+    if (userOverride) {
+      if (userOverride === 'custom-image' && s.backgroundImage) {
+        this._currentBg = 'custom-image';
+        this._applyBackgroundImage(s.backgroundImage);
+      } else if (userOverride === 'custom-image') {
+        // Owner removed the custom image; fall through to default
+      } else {
+        this._currentBg = userOverride;
+        this._applyBackground(userOverride);
+        return;
+      }
+      if (this._currentBg === 'custom-image') return;
+    }
+
+    // Apply owner's background type setting
+    const bgType = s.backgroundType || 'blurred';
+    if (bgType === 'image' && s.backgroundImage) {
+      this._currentBg = 'custom-image';
+      this._applyBackgroundImage(s.backgroundImage);
+    } else if (bgType === 'gradient' && s.backgroundGradient) {
+      this._currentBg = s.backgroundGradient;
+      this._applyBackground(s.backgroundGradient);
+    } else if (bgType === 'color' && s.backgroundColor) {
+      this._currentBg = s.backgroundColor;
+      this._applyBackground(s.backgroundColor);
+    } else {
+      // Default: blurred
+      this._currentBg = 'blurred';
+      this._applyBackground('blurred');
+    }
   }
 
   _applyBackground(bgValue) {
@@ -601,13 +643,25 @@ class FlipbookViewer {
 
     if (bgValue === 'blurred') {
       stage.classList.add('has-bg-image');
+      stage.classList.remove('has-custom-bg-image');
       stage.dataset.bgMode = 'blurred';
       stage.style.background = '';
     } else {
       stage.classList.remove('has-bg-image');
+      stage.classList.remove('has-custom-bg-image');
       stage.dataset.bgMode = 'solid';
       stage.style.background = bgValue;
     }
+  }
+
+  _applyBackgroundImage(imageUrl) {
+    const stage = this.viewerStage;
+    if (!stage) return;
+    stage.classList.remove('has-bg-image');
+    stage.classList.add('has-custom-bg-image');
+    stage.dataset.bgMode = 'custom-image';
+    stage.style.setProperty('--custom-bg-image-url', `url("${imageUrl}")`);
+    stage.style.background = '';
   }
 
   _setBlurredBackground(imageUrl) {
@@ -642,13 +696,54 @@ class FlipbookViewer {
     if (!btn) return;
 
     const slug = this.slug || 'default';
+    const s = this.settings || {};
+    const ownerBgType = s.backgroundType || 'blurred';
+
+    // Build "Owner's Choice" option based on settings
+    let ownerChoiceHtml = '';
+    if (ownerBgType === 'image' && s.backgroundImage) {
+      ownerChoiceHtml = `
+      <div class="bg-picker-section">
+        <div class="bg-picker-label">Owner's Background</div>
+        <div class="bg-picker-options">
+          <button class="bg-opt${this._currentBg === 'custom-image' ? ' active' : ''}" data-bg="custom-image" data-custom-image="${s.backgroundImage}">
+            <span class="bg-opt-preview" style="background-image:url('${s.backgroundImage}');background-size:cover;background-position:center;"></span>
+            <span class="bg-opt-label">Custom</span>
+          </button>
+        </div>
+      </div>`;
+    } else if (ownerBgType === 'gradient' && s.backgroundGradient) {
+      ownerChoiceHtml = `
+      <div class="bg-picker-section">
+        <div class="bg-picker-label">Owner's Background</div>
+        <div class="bg-picker-options">
+          <button class="bg-opt${this._currentBg === s.backgroundGradient ? ' active' : ''}" data-bg="${s.backgroundGradient}">
+            <span class="bg-opt-preview" style="background:${s.backgroundGradient}"></span>
+            <span class="bg-opt-label">Custom</span>
+          </button>
+        </div>
+      </div>`;
+    } else if (ownerBgType === 'color' && s.backgroundColor && s.backgroundColor !== '#ffffff') {
+      ownerChoiceHtml = `
+      <div class="bg-picker-section">
+        <div class="bg-picker-label">Owner's Background</div>
+        <div class="bg-picker-options">
+          <button class="bg-opt${this._currentBg === s.backgroundColor ? ' active' : ''}" data-bg="${s.backgroundColor}">
+            <span class="bg-opt-preview" style="background:${s.backgroundColor}"></span>
+            <span class="bg-opt-label">Custom</span>
+          </button>
+        </div>
+      </div>`;
+    }
+
     const popover = document.createElement('div');
     popover.id = 'bg-picker-popover';
     popover.className = 'bg-picker-popover';
     popover.innerHTML = `
       <div class="bg-picker-title">Background</div>
+      ${ownerChoiceHtml}
       <div class="bg-picker-section">
-        <div class="bg-picker-label">Blurred Page (Default)</div>
+        <div class="bg-picker-label">Blurred Page</div>
         <div class="bg-picker-options">
           <button class="bg-opt${this._currentBg === 'blurred' ? ' active' : ''}" data-bg="blurred">
             <span class="bg-opt-preview" style="background:linear-gradient(135deg,#1a1a2e,#16213e);position:relative;overflow:hidden;">
@@ -731,8 +826,14 @@ class FlipbookViewer {
     popover.querySelectorAll('.bg-opt').forEach(optBtn => {
       optBtn.addEventListener('click', () => {
         const bgVal = optBtn.dataset.bg;
-        this._applyBackground(bgVal);
-        localStorage.setItem(`fpv_bg_${slug}`, bgVal);
+        if (bgVal === 'custom-image' && optBtn.dataset.customImage) {
+          this._applyBackgroundImage(optBtn.dataset.customImage);
+          localStorage.setItem(`fpv_bg_${slug}`, bgVal);
+          this._ownerBgImageUrl = optBtn.dataset.customImage;
+        } else {
+          this._applyBackground(bgVal);
+          localStorage.setItem(`fpv_bg_${slug}`, bgVal);
+        }
         popover.remove();
       });
     });
@@ -839,9 +940,10 @@ class FlipbookViewer {
     const flipEl = this.flipbookInner;
     if (!flipEl) return;
 
-    const aspectRatio = pages[0]
-      ? (pages[0].width || 794) / (pages[0].height || 1123)
-      : 794 / 1123;
+    // Use real detected image dimensions if available, otherwise fall back to API metadata
+    const pw = this._detectedPageWidth || (pages[0] ? pages[0].width : 0) || 794;
+    const ph = this._detectedPageHeight || (pages[0] ? pages[0].height : 0) || 1123;
+    const aspectRatio = pw / ph;
 
     // Minimal chrome: bottom bar (~44px) + small padding (14px)
     const chromeH = 44 + 14;
@@ -2547,9 +2649,10 @@ class FlipbookViewer {
     container.innerHTML = '';
     container.style.perspective = '';
 
-    const aspectRatio = pages[0]
-      ? (pages[0].width || 794) / (pages[0].height || 1123)
-      : 794 / 1123;
+    // Use real detected image dimensions if available
+    const dpw = this._detectedPageWidth || (pages[0] ? pages[0].width : 0) || 794;
+    const dph = this._detectedPageHeight || (pages[0] ? pages[0].height : 0) || 1123;
+    const aspectRatio = dpw / dph;
     this._aspectRatio = aspectRatio;
 
     // Minimal chrome: bottom bar (~44px) + small padding (14px)

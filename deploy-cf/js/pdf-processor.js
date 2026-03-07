@@ -194,6 +194,17 @@ class PDFProcessor {
 
     if (this._cancelled) return;
 
+    // Step 4b: Store actual page dimensions in flipbook settings
+    if (allImageBlobs.length > 0 && allImageBlobs[0].width && allImageBlobs[0].height) {
+      try {
+        await fetch(`${this.apiBase}/api/flipbooks/${flipbookId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${this.token}` },
+          body: JSON.stringify({ settings: { pageWidth: allImageBlobs[0].width, pageHeight: allImageBlobs[0].height } })
+        });
+      } catch (_) { /* non-critical */ }
+    }
+
     // Step 5: Upload all pages
     this.onProgress(0, allImageBlobs.length, 'Uploading pages…');
     await this._uploadPages(flipbookId, allImageBlobs, allThumbBlobs);

@@ -793,8 +793,14 @@ async function loadEditor(id) {
 
   // Populate settings from flipbook
   const s = fb.settings || {};
-  setInputValue('setting-bg-color', s.backgroundColor || '#ffffff');
-  setInputValue('setting-bg-color-text', s.backgroundColor || '#ffffff');
+
+  // Background type settings
+  const bgType = s.backgroundType || 'blurred';
+  _activateBgTab(bgType);
+  setInputValue('setting-bg-color', s.backgroundColor || '#0f172a');
+  setInputValue('setting-bg-color-text', s.backgroundColor || '#0f172a');
+  if (s.backgroundGradient) _highlightGradient(s.backgroundGradient);
+  if (s.backgroundImage) _showBgImagePreview(s.backgroundImage);
   setInputValue('setting-shadow', s.maxShadowOpacity !== undefined ? s.maxShadowOpacity : 0.5);
   document.getElementById('shadow-val').textContent = Math.round((s.maxShadowOpacity || 0.5) * 100) + '%';
   setInputValue('setting-flip-speed', s.flippingTime || 800);
@@ -989,15 +995,121 @@ function toggleAccordion(btn) {
 }
 
 function applyBgPreset(color) {
+  updateBgColor(color);
+}
+
+/* ── Background Type Management ── */
+function _activateBgTab(type) {
+  document.querySelectorAll('.bg-type-tab').forEach(t => t.classList.toggle('active', t.dataset.type === type));
+  document.querySelectorAll('.bg-panel').forEach(p => p.classList.add('hidden'));
+  const panel = document.getElementById('bg-panel-' + type);
+  if (panel) panel.classList.remove('hidden');
+}
+
+function setBgType(type) {
+  _activateBgTab(type);
+  updateSetting('backgroundType', type);
+  // Clear unrelated settings depending on type
+  if (type === 'blurred') {
+    updateSetting('backgroundGradient', '');
+    updateSetting('backgroundImage', '');
+  } else if (type === 'color') {
+    updateSetting('backgroundGradient', '');
+    updateSetting('backgroundImage', '');
+  } else if (type === 'gradient') {
+    updateSetting('backgroundImage', '');
+  } else if (type === 'image') {
+    updateSetting('backgroundGradient', '');
+  }
+  // Re-render icons (lucide)
+  if (window.lucide) window.lucide.createIcons();
+}
+
+function updateBgColor(color) {
   updateSetting('backgroundColor', color);
   const swatch = document.getElementById('setting-bg-color');
   const text = document.getElementById('setting-bg-color-text');
   if (swatch) swatch.value = color;
   if (text) text.value = color;
-  // Highlight active preset
-  document.querySelectorAll('.color-preset-btn').forEach(btn => {
-    btn.classList.toggle('active', btn.getAttribute('data-color') === color);
+}
+
+function _highlightGradient(val) {
+  document.querySelectorAll('.gradient-preset').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.val === val);
   });
+}
+
+function updateBgGradient(btn) {
+  const val = btn.dataset.val;
+  updateSetting('backgroundGradient', val);
+  _highlightGradient(val);
+}
+
+function _showBgImagePreview(url) {
+  const area = document.getElementById('bg-image-preview-area');
+  const removeBtn = document.getElementById('bg-image-remove-btn');
+  if (!area) return;
+  area.innerHTML = `<img src="${url}" class="bg-preview-img" alt="Background preview">`;
+  document.getElementById('bg-image-dropzone').classList.add('has-preview');
+  if (removeBtn) removeBtn.style.display = 'inline-flex';
+}
+
+async function handleBgImageUpload(input) {
+  const file = input.files && input.files[0];
+  if (!file) return;
+  if (file.size > 5 * 1024 * 1024) {
+    showToast('Image must be under 5MB', 'error');
+    return;
+  }
+  if (!state.currentFlipbook || !state.currentFlipbook.id) {
+    showToast('Save the flipbook first', 'error');
+    return;
+  }
+
+  const dropzone = document.getElementById('bg-image-dropzone');
+  const area = document.getElementById('bg-image-preview-area');
+  area.innerHTML = '<p style="font-size:13px;color:var(--color-text-muted);">Uploading...</p>';
+
+  try {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const resp = await fetch(`${API}/api/flipbooks/${state.currentFlipbook.id}/background`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${state.token}` },
+      body: formData
+    });
+    const data = await resp.json();
+    if (data.success && data.url) {
+      const bgUrl = data.url + '?t=' + Date.now();
+      updateSetting('backgroundImage', bgUrl);
+      _showBgImagePreview(bgUrl);
+      showToast('Background image uploaded', 'success');
+    } else {
+      throw new Error(data.detail || 'Upload failed');
+    }
+  } catch (err) {
+    area.innerHTML = `<i data-lucide="upload-cloud" style="width:32px;height:32px;color:var(--color-text-muted);"></i>
+      <p style="font-size:13px;color:#ef4444;margin:8px 0 0;">Upload failed. Try again.</p>`;
+    if (window.lucide) window.lucide.createIcons();
+    showToast('Upload failed: ' + err.message, 'error');
+  }
+  input.value = '';
+}
+
+function removeBgImage() {
+  updateSetting('backgroundImage', '');
+  const area = document.getElementById('bg-image-preview-area');
+  const removeBtn = document.getElementById('bg-image-remove-btn');
+  const dropzone = document.getElementById('bg-image-dropzone');
+  if (area) {
+    area.innerHTML = `<i data-lucide="upload-cloud" style="width:32px;height:32px;color:var(--color-text-muted);"></i>
+      <p style="font-size:13px;color:var(--color-text-muted);margin:8px 0 0;">Click or drag an image here</p>
+      <p style="font-size:11px;color:var(--color-text-muted);margin:4px 0 0;">JPG, PNG, or WebP. Max 5MB.</p>`;
+  }
+  if (dropzone) dropzone.classList.remove('has-preview');
+  if (removeBtn) removeBtn.style.display = 'none';
+  if (window.lucide) window.lucide.createIcons();
 }
 
 // ── Editor inline preview ────────────────────────────────────
@@ -1853,6 +1965,11 @@ window.APP = {
   goToUploadedFlipbook,
   viewUploadedFlipbook,
   applyBgPreset,
+  setBgType,
+  updateBgColor,
+  updateBgGradient,
+  handleBgImageUpload,
+  removeBgImage,
   handleAvatarUpload,
   removeAvatar,
   toggleApiKeyVisibility,

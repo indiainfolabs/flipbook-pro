@@ -85,6 +85,11 @@ export default {
       // General analytics track endpoint
       if (path === '/api/analytics/track' && method === 'POST') return handleGeneralTrack(request, env);
 
+      // Background image upload & retrieval
+      const bgUploadMatch = path.match(/^\/api\/flipbooks\/([a-zA-Z0-9_-]+)\/background$/);
+      if (bgUploadMatch && method === 'POST') return handleUploadBackground(bgUploadMatch[1], request, env);
+      if (bgUploadMatch && method === 'GET') return handleGetBackground(bgUploadMatch[1], env);
+
       // Upload PDF
       if (path === '/api/upload' && method === 'POST') return handleUpload(request, env);
 
@@ -594,6 +599,46 @@ async function handleGeneralTrack(request, env) {
 }
 
 // ============================================================
+// Background Image Upload & Retrieval
+// ============================================================
+
+async function handleUploadBackground(flipbookId, request, env) {
+  const formData = await request.formData();
+  const file = formData.get('file');
+  if (!file) return error('No file provided', 400);
+
+  const contentType = file.type || 'image/jpeg';
+  const ext = contentType.includes('png') ? 'png' : contentType.includes('webp') ? 'webp' : 'jpg';
+  const key = `${flipbookId}/background.${ext}`;
+
+  // Delete any existing background images first
+  for (const e of ['jpg', 'png', 'webp']) {
+    try { await env.UPLOADS.delete(`${flipbookId}/background.${e}`); } catch (_) {}
+  }
+
+  await env.UPLOADS.put(key, file.stream(), {
+    httpMetadata: { contentType },
+  });
+
+  const origin = new URL(request.url).origin;
+  return json({ success: true, url: `${origin}/api/flipbooks/${flipbookId}/background` });
+}
+
+async function handleGetBackground(flipbookId, env) {
+  for (const ext of ['webp', 'jpg', 'png']) {
+    const key = `${flipbookId}/background.${ext}`;
+    const obj = await env.UPLOADS.get(key);
+    if (obj) {
+      const ct = ext === 'webp' ? 'image/webp' : ext === 'png' ? 'image/png' : 'image/jpeg';
+      return new Response(obj.body, {
+        headers: { ...CORS_HEADERS, 'Content-Type': ct, 'Cache-Control': 'public, max-age=3600' },
+      });
+    }
+  }
+  return error('No background image', 404);
+}
+
+// ============================================================
 // Viewer Data (public endpoint for embedded viewer)
 // ============================================================
 
@@ -617,8 +662,8 @@ async function handleViewerData(flipbookId, env, request) {
       image_url: imageUrl,
       thumbUrl,
       thumb_url: thumbUrl,
-      width: 794,
-      height: 1123,
+      width: settings.pageWidth || 794,
+      height: settings.pageHeight || 1123,
     };
   });
 

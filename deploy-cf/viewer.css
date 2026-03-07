@@ -332,6 +332,19 @@ html, body {
   z-index: 0;
 }
 
+/* When a custom background image is set by the flipbook owner */
+#viewer-stage.has-custom-bg-image::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: var(--custom-bg-image-url);
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  pointer-events: none;
+  z-index: 0;
+}
+
 /* Vignette overlay — always on top of blurred bg */
 #viewer-stage::after {
   content: '';
