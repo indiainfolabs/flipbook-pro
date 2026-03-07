@@ -1,0 +1,211 @@
+/* ============================================================
+   FlipBook Pro — Share Modal Enhancements
+   CSS-only additions for improved share/embed UX.
+   ============================================================ */
+
+/* ──────────────────────────────────────────
+   1. Modal Enter/Exit Spring Animation
+   ────────────────────────────────────────── */
+
+.modal-backdrop.open .modal-box {
+  animation: shareModalIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+.modal-backdrop:not(.open) .modal-box {
+  animation: shareModalOut 0.22s var(--ease-smooth) both;
+}
+
+@keyframes shareModalIn {
+  from {
+    opacity: 0;
+    transform: scale(0.88) translateY(16px);
+    filter: blur(4px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+    filter: blur(0);
+  }
+}
+
+@keyframes shareModalOut {
+  from {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.95) translateY(6px);
+  }
+}
+
+/* Staggered content reveal inside modal */
+.modal-backdrop.open .modal-section:nth-child(1) { animation: shareContentReveal 0.35s 0.06s both; }
+.modal-backdrop.open .modal-section:nth-child(2) { animation: shareContentReveal 0.35s 0.12s both; }
+.modal-backdrop.open .modal-section:nth-child(3) { animation: shareContentReveal 0.35s 0.18s both; }
+.modal-backdrop.open .modal-section:nth-child(4) { animation: shareContentReveal 0.35s 0.24s both; }
+
+@keyframes shareContentReveal {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Header reveal */
+.modal-backdrop.open .modal-header {
+  animation: shareContentReveal 0.3s 0.02s both;
+}
+
+/* Tabs reveal */
+.modal-backdrop.open .share-tabs {
+  animation: shareContentReveal 0.3s 0.04s both;
+}
+
+
+/* ──────────────────────────────────────────
+   2. Enhanced Social Buttons — Brand Colors
+   ────────────────────────────────────────── */
+
+.social-btn {
+  min-height: 72px;
+  position: relative;
+  overflow: hidden;
+}
+
+.social-btn::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+
+/* ──────────────────────────────────────────
+   3. Copy Link Field — Success Animation
+   ────────────────────────────────────────── */
+
+.copy-btn.copied {
+  animation: shareCopyPulse 0.3s var(--ease-spring);
+}
+
+@keyframes shareCopyPulse {
+  0%   { transform: scale(1); }
+  50%  { transform: scale(1.06); }
+  100% { transform: scale(1); }
+}
+
+
+/* ──────────────────────────────────────────
+   4. Subtle Glow Behind Modal
+   ────────────────────────────────────────── */
+
+.modal-box::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: 21px;
+  background: linear-gradient(
+    135deg,
+    rgba(79, 126, 247, 0.12) 0%,
+    transparent 50%,
+    rgba(79, 126, 247, 0.06) 100%
+  );
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.modal-backdrop.open .modal-box::before {
+  opacity: 1;
+}
+
+
+/* ──────────────────────────────────────────
+   5. Focus Visible Styles
+   ────────────────────────────────────────── */
+
+.share-tab:focus-visible,
+.copy-btn:focus-visible,
+.embed-size-btn:focus-visible,
+.embed-copy-btn:focus-visible,
+.qr-download-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+
+/* ──────────────────────────────────────────
+   6. Responsive Adjustments
+   ────────────────────────────────────────── */
+
+@media (max-width: 520px) {
+  .social-btn {
+    min-height: 60px;
+    padding: var(--sp-3) var(--sp-2);
+  }
+
+  .social-btn svg {
+    width: 22px;
+    height: 22px;
+  }
+
+  .embed-size-row {
+    flex-wrap: wrap;
+  }
+}
+
+
+/* ──────────────────────────────────────────
+   7. Reduced Motion Support
+   ────────────────────────────────────────── */
+
+@media (prefers-reduced-motion: reduce) {
+  .modal-backdrop.open .modal-box {
+    animation: none;
+    transform: scale(1) translateY(0);
+    filter: none;
+  }
+
+  .modal-backdrop:not(.open) .modal-box {
+    animation: none;
+  }
+
+  .modal-backdrop.open .modal-section,
+  .modal-backdrop.open .modal-header,
+  .modal-backdrop.open .share-tabs {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+
+  .share-tab-content.active {
+    animation: none;
+  }
+
+  .social-btn:hover svg {
+    transform: none;
+  }
+
+  .copy-btn.copied {
+    animation: none;
+  }
+}
+
+
+/* ──────────────────────────────────────────
+   8. Print — Hide Modal
+   ────────────────────────────────────────── */
+
+@media print {
+  .modal-backdrop {
+    display: none !important;
+  }
+}

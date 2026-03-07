@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<!--
+   ______                            __
+  / ____/___  ____ ___  ____  __  __/ /____  _____
+ / /   / __ \/ __ `__ \/ __ \/ / / / __/ _ \/ ___/
+/ /___/ /_/ / / / / / / /_/ / /_/ / /_/  __/ /
+\____/\____/_/ /_/ /_/ .___/\__,_/\__/\___/_/
+                    /_/
+        Created with Perplexity Computer
+        https://www.perplexity.ai/computer
+-->
+
+<!-- Perplexity Computer Attribution — SEO Meta Tags -->
+<meta name="generator" content="Perplexity Computer">
+<meta name="author" content="Perplexity Computer">
+<meta property="og:see_also" content="https://www.perplexity.ai/computer">
+<link rel="author" href="https://www.perplexity.ai/computer">
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="description" content="Interactive flipbook viewer — FlipBook Pro">
+<meta name="robots" content="noindex">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+
+<!-- Open Graph -->
+<meta property="og:type" content="website">
+<meta property="og:title" content="FlipBook Pro Viewer">
+<meta property="og:description" content="Interactive flipbook viewer">
+
+<!-- PWA color -->
+<meta name="theme-color" content="#0a0a14">
+
+<title>FlipBook Pro</title>
+
+<!-- Google Fonts: Inter -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<!-- Viewer Styles -->
+<link rel="stylesheet" href="viewer.css">
+<link rel="stylesheet" href="share-enhancements.css">
+
+<!-- Favicon: inline SVG data URI -->
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%234f7ef7'/><rect x='6' y='5' width='8' height='22' rx='2' fill='white' opacity='0.9'/><rect x='18' y='5' width='8' height='22' rx='2' fill='white' opacity='0.6'/></svg>">
+
+<!-- JSON-LD -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  "name": "FlipBook Pro Viewer",
+  "applicationCategory": "MultimediaApplication",
+  "creator": {
+    "@type": "SoftwareApplication",
+    "name": "Perplexity Computer",
+    "url": "https://www.perplexity.ai/computer"
+  }
+}
+</script>
+</head>
+<body>
+<div id="viewer-root">
+
+  <!-- ═══════════════════════════════════════
+       Loading Screen
+       ═══════════════════════════════════════ -->
+  <div id="loading-screen" role="status" aria-live="polite">
+    <div class="loading-logo">
+      <div class="loading-book-anim" aria-hidden="true">
+        <div class="loading-book">
+          <div class="loading-book-page loading-book-page-1"></div>
+          <div class="loading-book-page loading-book-page-2"></div>
+          <div class="loading-book-page loading-book-page-3"></div>
+          <div class="loading-book-spine"></div>
+        </div>
+      </div>
+      <div class="loading-logo-text">FlipBook <span>Pro</span></div>
+    </div>
+
+    <!-- Loading meta: title + page count (Agent 3) -->
+    <div class="loading-meta">
+      <p class="loading-title" id="loading-title"></p>
+      <p class="loading-page-count" id="loading-page-count"></p>
+    </div>
+
+    <p class="loading-text" id="loading-text">Loading flipbook...</p>
+
+    <div class="loading-progress-wrap" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-label="Loading progress">
+      <div class="loading-progress-bar" id="loading-bar"></div>
+    </div>
+
+    <!-- Progress indicator (Agent 3) -->
+    <div class="loading-progress-indicator" id="loading-progress"></div>
+
+    <!-- Encouraging message after 3s (Agent 3) -->
+    <p class="loading-encourage" id="loading-encourage"></p>
+  </div>
+
+  <!-- ═══════════════════════════════════════
+       Error Screen
+       ═══════════════════════════════════════ -->
+  <div id="error-screen" role="alert" aria-live="assertive">
+    <div class="error-icon" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10"/>
+        <line x1="12" y1="8" x2="12" y2="12"/>
+        <line x1="12" y1="16" x2="12.01" y2="16"/>
+      </svg>
+    </div>
+    <h1 class="error-title">Flipbook Not Found</h1>
+    <p class="error-message">The flipbook you're looking for could not be loaded.</p>
+    <a href="?" style="color:var(--accent);font-size:13px;margin-top:8px;text-decoration:none;">
+      ← View Demo Instead
+    </a>
+    <!-- Action link container (Agent 3) -->
+    <div class="error-link" id="error-link"></div>
+  </div>
+
+  <!-- ═══════════════════════════════════════
+       Main Viewer Stage
+       ═══════════════════════════════════════ -->
+  <div id="viewer-stage" role="main" aria-label="Flipbook viewer">
+
+    <!-- Top-left book title -->
+    <div class="viewer-title" id="viewer-title" aria-label="Flipbook title">
+      <svg class="viewer-title-icon" width="18" height="18" viewBox="0 0 22 22" fill="none" aria-hidden="true">
+        <rect x="2" y="2" width="7" height="18" rx="2" fill="currentColor" opacity="0.9"/>
+        <rect x="13" y="2" width="7" height="18" rx="2" fill="currentColor" opacity="0.5"/>
+      </svg>
+      <span class="viewer-title-text">FlipBook Pro</span>
+    </div>
+
+    <!-- Top-right branding badge -->
+    <div class="viewer-badge" id="viewer-badge" aria-label="Branding">
+      <span class="viewer-badge-text">FlipBook Pro</span>
+    </div>
+
+    <!-- Flipbook Container -->
+    <div id="flipbook-container">
+      <div class="flipbook-wrapper">
+        <div id="flipbook-inner" aria-label="Flipbook pages" role="document"></div>
+        <div class="flipbook-shadow" aria-hidden="true"></div>
+        <div class="flipbook-ambient" aria-hidden="true"></div>
+      </div>
+    </div>
+
+    <!-- Bottom page scrubber -->
+    <div class="page-scrubber" id="page-scrubber" aria-label="Page scrubber" role="navigation">
+      <input type="range" class="page-scrubber-input" id="page-scrubber-input"
+        min="1" max="1" value="1" step="1" aria-label="Scrub through pages" />
+      <div class="page-scrubber-label" id="page-scrubber-label" aria-live="polite"></div>
+    </div>
+
+  </div><!-- /viewer-stage -->
+
+  <!-- ═══════════════════════════════════════
+       Top Toolbar (floating pill, centered)
+       ═══════════════════════════════════════ -->
+  <nav id="viewer-toolbar" aria-label="Flipbook controls" role="toolbar">
+    <!-- Populated by viewer-app.js -->
+  </nav>
+
+  <!-- ═══════════════════════════════════════
+       Thumbnail Panel
+       ═══════════════════════════════════════ -->
+  <aside id="thumbnail-panel" role="complementary" aria-label="Page thumbnails">
+    <!-- Populated by viewer-app.js -->
+  </aside>
+
+  <!-- ═══════════════════════════════════════
+       Share Modal
+       ═══════════════════════════════════════ -->
+  <div id="share-modal" class="modal-backdrop" role="dialog"
+    aria-modal="true" aria-label="Share flipbook">
+    <!-- Populated by viewer-app.js -->
+  </div>
+
+  <!-- ═══════════════════════════════════════
+       Keyboard Shortcuts Overlay
+       ═══════════════════════════════════════ -->
+  <div id="shortcuts-overlay" role="dialog" aria-modal="true" aria-label="Keyboard shortcuts">
+    <div class="shortcuts-box">
+      <h2 class="shortcuts-title">Keyboard Shortcuts</h2>
+
+      <div class="shortcut-row">
+        <span class="shortcut-desc">Next page</span>
+        <div class="shortcut-keys">
+          <span class="key">→</span>
+          <span class="key">Space</span>
+        </div>
+      </div>
+
+      <div class="shortcut-row">
+        <span class="shortcut-desc">Previous page</span>
+        <div class="shortcut-keys">
+          <span class="key">←</span>
+        </div>
+      </div>
+
+      <div class="shortcut-row">
+        <span class="shortcut-desc">First page</span>
+        <div class="shortcut-keys">
+          <span class="key">Home</span>
+          <span class="key">↑</span>
+        </div>
+      </div>
+
+      <div class="shortcut-row">
+        <span class="shortcut-desc">Last page</span>
+        <div class="shortcut-keys">
+          <span class="key">End</span>
+          <span class="key">↓</span>
+        </div>
+      </div>
+
+      <div class="shortcut-row">
+        <span class="shortcut-desc">Toggle fullscreen</span>
+        <div class="shortcut-keys">
+          <span class="key">F</span>
+        </div>
+      </div>
+
+      <div class="shortcut-row">
+        <span class="shortcut-desc">Toggle thumbnails</span>
+        <div class="shortcut-keys">
+          <span class="key">T</span>
+        </div>
+      </div>
+
+      <div class="shortcut-row">
+        <span class="shortcut-desc">Zoom in / out</span>
+        <div class="shortcut-keys">
+          <span class="key">+</span>
+          <span class="key">−</span>
+        </div>
+      </div>
+
+      <div class="shortcut-row">
+        <span class="shortcut-desc">Close / Exit</span>
+        <div class="shortcut-keys">
+          <span class="key">Esc</span>
+        </div>
+      </div>
+
+      <div class="shortcut-row">
+        <span class="shortcut-desc">Toggle auto-play</span>
+        <div class="shortcut-keys">
+          <span class="key">P</span>
+        </div>
+      </div>
+
+      <div class="shortcut-row">
+        <span class="shortcut-desc">Show shortcuts</span>
+        <div class="shortcut-keys">
+          <span class="key">?</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════
+       Toast Container
+       ═══════════════════════════════════════ -->
+  <div id="toast-container" aria-live="polite" aria-atomic="false"></div>
+
+  <!-- ═══════════════════════════════════════
+       Perplexity Credit (subtle)
+       ═══════════════════════════════════════ -->
+  <a class="pplx-credit"
+    href="https://www.perplexity.ai/computer"
+    target="_blank" rel="noopener noreferrer"
+    title="Created with Perplexity Computer">
+    Powered by Perplexity Computer
+  </a>
+
+</div><!-- /viewer-root -->
+
+<!-- Page Flip Engine -->
+<script src="js/page-flip-engine.js"></script>
+<!-- Main Viewer App -->
+<script src="js/viewer-app.js"></script>
+
+<!-- Close shortcuts overlay on outside click -->
+<script>
+  document.getElementById('shortcuts-overlay').addEventListener('click', function(e) {
+    if (e.target === this) this.classList.remove('open');
+  });
+</script>
+
+</body>
+</html>

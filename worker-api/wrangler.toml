@@ -1,0 +1,16 @@
+name = "flipbook-pro-api"
+main = "src/index.js"
+compatibility_date = "2024-01-01"
+
+[vars]
+ENVIRONMENT = "production"
+CORS_ORIGIN = "https://flipbook-pro.pages.dev"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "flipbook-pro-db"
+database_id = "1b13238a-f603-4089-af83-61f69d59afad"
+
+[[r2_buckets]]
+binding = "UPLOADS"
+bucket_name = "flipbook-pro-uploads"
