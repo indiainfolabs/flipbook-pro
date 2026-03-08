@@ -261,7 +261,14 @@ async function handleUpdateFlipbook(id, request, env) {
 
   if (body.title !== undefined) { updates.push('title = ?'); values.push(body.title); }
   if (body.status !== undefined) { updates.push('status = ?'); values.push(body.status); }
-  if (body.settings !== undefined) { updates.push('settings = ?'); values.push(JSON.stringify(body.settings)); }
+  if (body.settings !== undefined) {
+    // Merge incoming settings with existing settings instead of replacing
+    const existing = await env.DB.prepare('SELECT settings FROM flipbooks WHERE id = ? AND user_id = ?').bind(id, user.id).first();
+    const existingSettings = existing ? JSON.parse(existing.settings || '{}') : {};
+    const mergedSettings = { ...existingSettings, ...body.settings };
+    updates.push('settings = ?');
+    values.push(JSON.stringify(mergedSettings));
+  }
   if (body.page_count !== undefined) { updates.push('page_count = ?'); values.push(body.page_count); }
   if (body.pageCount !== undefined) { updates.push('page_count = ?'); values.push(body.pageCount); }
 

@@ -641,32 +641,83 @@ async function processUpload(file) {
 
     const title = file.name.replace(/\.pdf$/i, '').replace(/[-_]/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
 
-    // Step 2: Create the flipbook record via API
+    // Step 2: Analyze pages — detect landscape spreads that need splitting
+    setProgress(6, 'Analysing pages…');
+    const pageInfos = [];
+    for (let i = 1; i <= totalPages; i++) {
+      const page = await pdf.getPage(i);
+      const vp = page.getViewport({ scale: 1 });
+      pageInfos.push({ num: i, w: vp.width, h: vp.height, isSpread: vp.width > vp.height * 1.3 });
+    }
+
+    // Build the output page list: single pages stay as-is, spreads get split into left+right
+    const outputPages = [];
+    for (const info of pageInfos) {
+      if (info.isSpread) {
+        outputPages.push({ pdfPage: info.num, half: 'left', srcW: info.w, srcH: info.h });
+        outputPages.push({ pdfPage: info.num, half: 'right', srcW: info.w, srcH: info.h });
+      } else {
+        outputPages.push({ pdfPage: info.num, half: 'full', srcW: info.w, srcH: info.h });
+      }
+    }
+    const finalPageCount = outputPages.length;
+
+    // Step 3: Create the flipbook record via API
     setProgress(8, 'Creating flipbook…');
-    const createResp = await api.request('POST', '/api/flipbooks', { title, page_count: totalPages });
+    const createResp = await api.request('POST', '/api/flipbooks', { title, page_count: finalPageCount });
     const flipbookId = createResp.id;
     if (!flipbookId) throw new Error('API did not return a flipbook id');
 
-    // Step 3: Render each PDF page to a JPEG and upload (3 concurrent batches)
+    // Step 4: Render each output page and upload (3 concurrent batches)
+    const RENDER_SCALE = 2; // 2x for high quality
     const BATCH_SIZE = 3;
     let completedPages = 0;
 
-    const renderAndUploadPage = async (pageNum) => {
-      // Render page at 1.5x scale for quality/speed balance
-      const page = await pdf.getPage(pageNum);
-      const viewport = page.getViewport({ scale: 1.5 });
-      const canvas = document.createElement('canvas');
-      canvas.width = viewport.width;
-      canvas.height = viewport.height;
-      const ctx = canvas.getContext('2d');
-      await page.render({ canvasContext: ctx, viewport }).promise;
+    const renderAndUploadPage = async (outIdx) => {
+      const spec = outputPages[outIdx];
+      const page = await pdf.getPage(spec.pdfPage);
+      const viewport = page.getViewport({ scale: RENDER_SCALE });
 
-      // Convert canvas to JPEG blob (3-5x smaller than PNG)
-      const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.82));
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+
+      if (spec.half === 'full') {
+        // Non-spread page: render full
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
+        await page.render({ canvasContext: ctx, viewport }).promise;
+      } else {
+        // Spread page: render full, then crop left or right half
+        const fullCanvas = document.createElement('canvas');
+        fullCanvas.width = viewport.width;
+        fullCanvas.height = viewport.height;
+        const fullCtx = fullCanvas.getContext('2d');
+        await page.render({ canvasContext: fullCtx, viewport }).promise;
+
+        const halfW = Math.round(viewport.width / 2);
+        canvas.width = halfW;
+        canvas.height = viewport.height;
+        const sx = spec.half === 'left' ? 0 : halfW;
+        ctx.drawImage(fullCanvas, sx, 0, halfW, viewport.height, 0, 0, halfW, viewport.height);
+      }
+
+      // Convert canvas to WebP blob for best quality/size
+      let blob;
+      if (canvas.toBlob) {
+        blob = await new Promise(resolve => {
+          canvas.toBlob(blobResult => {
+            if (blobResult) { resolve(blobResult); return; }
+            // Fallback to JPEG if WebP not supported
+            canvas.toBlob(resolve, 'image/jpeg', 0.85);
+          }, 'image/webp', 0.85);
+        });
+      }
 
       // Upload page image
+      const pageNum = outIdx + 1;
+      const ext = blob.type.includes('webp') ? 'webp' : 'jpg';
       const formData = new FormData();
-      formData.append('file', blob, `page-${pageNum}.jpg`);
+      formData.append('file', blob, `page-${pageNum}.${ext}`);
       formData.append('page_num', String(pageNum));
       const headers = {};
       if (state.token) headers['Authorization'] = `Bearer ${state.token}`;
@@ -677,25 +728,36 @@ async function processUpload(file) {
       }).then(r => { if (!r.ok) throw new Error(`Page upload failed: ${r.status}`); });
 
       completedPages++;
-      const pct = Math.round(8 + (completedPages / totalPages) * 82);
-      setProgress(pct, `Uploading page ${completedPages} of ${totalPages}…`);
+      const pct = Math.round(8 + (completedPages / finalPageCount) * 82);
+      setProgress(pct, `Uploading page ${completedPages} of ${finalPageCount}…`);
+
+      return { pageNum, w: canvas.width, h: canvas.height };
     };
 
     // Process pages in parallel batches of BATCH_SIZE
-    for (let batchStart = 1; batchStart <= totalPages; batchStart += BATCH_SIZE) {
-      const batchEnd = Math.min(batchStart + BATCH_SIZE - 1, totalPages);
-      const batchNums = [];
-      for (let i = batchStart; i <= batchEnd; i++) batchNums.push(i);
+    let firstPageDims = null;
+    for (let batchStart = 0; batchStart < finalPageCount; batchStart += BATCH_SIZE) {
+      const batchEnd = Math.min(batchStart + BATCH_SIZE, finalPageCount);
+      const batchIndices = [];
+      for (let i = batchStart; i < batchEnd; i++) batchIndices.push(i);
 
-      const renderPct = Math.round(8 + ((batchStart - 1) / totalPages) * 82);
-      setProgress(renderPct, `Rendering pages ${batchStart}–${batchEnd} of ${totalPages}…`);
+      const renderPct = Math.round(8 + (batchStart / finalPageCount) * 82);
+      setProgress(renderPct, `Rendering pages ${batchStart + 1}–${batchEnd} of ${finalPageCount}…`);
 
-      await Promise.all(batchNums.map(n => renderAndUploadPage(n)));
+      const results = await Promise.all(batchIndices.map(n => renderAndUploadPage(n)));
+      if (!firstPageDims && results[0]) firstPageDims = results[0];
     }
 
-    // Step 4: Publish the flipbook
+    // Step 5: Store page dimensions in settings and publish
     setProgress(95, 'Finalising…');
-    await api.request('PUT', `/api/flipbooks/${flipbookId}`, { status: 'published' });
+    const settingsUpdate = { status: 'published', page_count: finalPageCount };
+    if (firstPageDims) {
+      settingsUpdate.settings = {
+        pageWidth: firstPageDims.w,
+        pageHeight: firstPageDims.h,
+      };
+    }
+    await api.request('PUT', `/api/flipbooks/${flipbookId}`, settingsUpdate);
 
     setProgress(100, 'Done!');
 
@@ -703,7 +765,7 @@ async function processUpload(file) {
     const newFb = {
       id: flipbookId,
       title,
-      page_count: totalPages,
+      page_count: finalPageCount,
       status: 'published',
       visibility: 'private',
       view_count: 0,
@@ -721,7 +783,7 @@ async function processUpload(file) {
     state.flipbooks.unshift(newFb);
     state.lastUploadedFlipbook = newFb;
     state.pendingUploadFile = null;
-    showToast(`"${newFb.title}" uploaded — ${totalPages} pages`, 'success');
+    showToast(`"${newFb.title}" uploaded — ${finalPageCount} pages`, 'success');
 
     // Show success state
     const successEl = document.getElementById('upload-success-state');
@@ -731,7 +793,7 @@ async function processUpload(file) {
       const titleEl = document.getElementById('success-flipbook-title');
       const pagesCountEl = document.getElementById('success-page-count');
       if (titleEl) titleEl.textContent = newFb.title;
-      if (pagesCountEl) pagesCountEl.textContent = `${totalPages} pages`;
+      if (pagesCountEl) pagesCountEl.textContent = `${finalPageCount} pages`;
       successEl.classList.remove('hidden');
     } else {
       navigate('editor', newFb.id);
