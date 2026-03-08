@@ -665,26 +665,29 @@ class FlipbookViewer {
   }
 
   _setBlurredBackground(imageUrl) {
-    // Apply blurred background directly on #viewer-stage via custom property
-    // This avoids z-index / stacking context issues with child elements
+    // Preload the blurred background image and set the CSS variable.
+    // Does NOT add the has-bg-image class — that is managed by _applyBackground
+    // so that non-blurred modes (color, gradient, image) are not overridden.
     const stage = this.viewerStage;
     if (!stage) return;
+
+    // Set the CSS variable immediately so the image is ready if/when blurred mode activates
+    stage.style.setProperty('--bg-image-url', `url("${imageUrl}")`);
 
     const img = new Image();
     img.crossOrigin = 'anonymous';
     img.onload = () => {
-      stage.style.setProperty('--bg-image-url', `url("${imageUrl}")`);
-      stage.classList.add('has-bg-image');
+      // Only add has-bg-image if the current mode IS blurred
+      if (this._currentBg === 'blurred') {
+        stage.classList.add('has-bg-image');
+      }
     };
     img.onerror = () => {
-      // Still try setting — the image may work despite CORS error on preload
-      stage.style.setProperty('--bg-image-url', `url("${imageUrl}")`);
-      stage.classList.add('has-bg-image');
+      if (this._currentBg === 'blurred') {
+        stage.classList.add('has-bg-image');
+      }
     };
     img.src = imageUrl;
-    // Also set immediately in case image is already cached
-    stage.style.setProperty('--bg-image-url', `url("${imageUrl}")`);
-    stage.classList.add('has-bg-image');
   }
 
   _openBgPicker() {
