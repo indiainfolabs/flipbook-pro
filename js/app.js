@@ -1122,7 +1122,7 @@ function renderSparkline(canvasId, dataPoints, color) {
     if (i === 0) ctx.moveTo(x, y);
     else ctx.lineTo(x, y);
   });
-  ctx.strokeStyle = color || '#2563eb';
+  ctx.strokeStyle = color || '#6366f1';
   ctx.lineWidth = 1.5;
   ctx.lineJoin = 'round';
   ctx.lineCap = 'round';
@@ -1133,8 +1133,8 @@ function renderSparkline(canvasId, dataPoints, color) {
   ctx.lineTo(pad, dh);
   ctx.closePath();
   const grad = ctx.createLinearGradient(0, 0, 0, dh);
-  grad.addColorStop(0, (color || '#2563eb') + '30');
-  grad.addColorStop(1, (color || '#2563eb') + '05');
+  grad.addColorStop(0, (color || '#6366f1') + '30');
+  grad.addColorStop(1, (color || '#6366f1') + '05');
   ctx.fillStyle = grad;
   ctx.fill();
 }
@@ -1224,7 +1224,7 @@ async function loadAnalytics(id, days = 30) {
   // Render sparklines in KPI cards
   const sparkData = analyticsData.viewData || [];
   const last7 = sparkData.slice(-7);
-  renderSparkline('sparkline-views', last7, '#2563eb');
+  renderSparkline('sparkline-views', last7, '#6366f1');
   renderSparkline('sparkline-visitors', last7.map(v => Math.round(v * 0.6 + Math.random() * 10)), '#8b5cf6');
   renderSparkline('sparkline-pages', last7.map(() => 2 + Math.random() * 4), '#06b6d4');
   renderSparkline('sparkline-time', last7.map(() => 1 + Math.random() * 5), '#f59e0b');
@@ -1256,14 +1256,14 @@ function renderViewsChart(labels, data) {
       datasets: [{
         label: 'Views',
         data,
-        borderColor: '#2563eb',
-        backgroundColor: 'rgba(37, 99, 235, 0.08)',
+        borderColor: '#6366f1',
+        backgroundColor: 'rgba(99, 102, 241, 0.08)',
         borderWidth: 2,
         fill: true,
         tension: 0.4,
         pointRadius: 2,
         pointHoverRadius: 5,
-        pointBackgroundColor: '#2563eb',
+        pointBackgroundColor: '#6366f1',
       }],
     },
     options: {

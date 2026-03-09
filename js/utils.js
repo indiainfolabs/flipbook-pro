@@ -258,7 +258,7 @@
       success: { bg: '#16a34a', text: '#fff' },
       error:   { bg: '#dc2626', text: '#fff' },
       warning: { bg: '#d97706', text: '#fff' },
-      info:    { bg: '#2563eb', text: '#fff' }
+      info:    { bg: '#6366f1', text: '#fff' }
     };
     var style = colors[type] || colors.info;
 

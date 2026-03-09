@@ -4,11 +4,11 @@
    CUSTOM PROPERTIES OVERRIDE
    ============================================================ */
 :root {
-  --accent: #2563eb;
-  --accent-hover: #1d4ed8;
-  --accent-active: #1e40af;
-  --accent-light: #eff6ff;
-  --accent-glow: rgba(37, 99, 235, 0.25);
+  --accent: #6366f1;
+  --accent-hover: #4f46e5;
+  --accent-active: #4338ca;
+  --accent-light: #eef2ff;
+  --accent-glow: rgba(99, 102, 241, 0.25);
   --hero-dark: #0b1120;
   --hero-mid: #131c33;
 }
@@ -766,7 +766,7 @@
 
 .step-icon-upload {
   background: #eff6ff;
-  color: #2563eb;
+  color: #6366f1;
 }
 
 .step-icon-customize {
